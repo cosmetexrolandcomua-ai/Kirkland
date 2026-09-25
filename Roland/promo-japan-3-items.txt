@@ -1,0 +1,747 @@
+<!-- =====================================================================
+  АКЦІЯ «Японська косметика Cosmetex Roland»: 3 артикули — найдешевший безкоштовно
+  + безкоштовна доставка. Вставити ОКРЕМИМ блоком ПІСЛЯ всіх інших скриптів.
+  Інші скрипти не змінює і не зачіпає дані AjaxCart.
+  ===================================================================== -->
+<script>
+(function () {
+  'use strict';
+
+  /* =========================
+   * ГОЛОВНИЙ ВИМИКАЧ
+   * true  = акція працює
+   * false = скрипт вимкнено
+   * ========================= */
+  const ENABLED = true;
+  if (!ENABLED) return;
+  if (window.__skJpPromoLoaded) return;
+  window.__skJpPromoLoaded = true;
+
+  /* =========================
+   * НАЛАШТУВАННЯ
+   * ========================= */
+  const PROMO = {
+    minItems: 3,            // скільки різних артикулів потрібно
+    repeatable: false,      // true = кожен 3-й (6 артикулів → 2 безкоштовні), false = лише один подарунок
+    freeShipping: true,     // повідомлення про безкоштовну доставку
+    startDate: null,        // напр. '2026-10-01' (включно) або null
+    endDate: null,          // напр. '2026-10-31' (включно) або null
+    categoryUrl: 'https://skinel.com.ua/yaponska-kosmetyka/',
+    storageKey: 'skJpPromoOrder',
+    storageTtlMs: 3 * 60 * 60 * 1000
+  };
+
+  /* АРТИКУЛИ, ЩО БЕРУТЬ УЧАСТЬ В АКЦІЇ
+   * price — ціна з прайсу (запасна, якщо ціну не вдалося взяти з кошика)
+   * path  — адреса сторінки товару (для розпізнавання в кошику)
+   */
+  const PRODUCTS = {
+    '1343': { price: 180, path: "/zvolozhuvalnyi-krem-dlia-ruk-z-kinskym-zhyrom-loshi/", name: "Зволожувальний крем для рук з кінським жиром Loshi 45г" },
+    '1344': { price: 399, path: "/krem-dlia-ruk-loshi-z-kinskoiu-oliieiu-ta-cica-protect/", name: "Крем для рук Loshi з кінською олією та CICA Protect" },
+    '1345': { price: 399, path: "/krem-dlia-ruk-z-kinskoiu-oliieiu-ta-q10/", name: "Крем для рук з кінською олією та Q10" },
+    '1346': { price: 615, path: "/pinka-dlia-vmyvannia-chanosui-matcha-face-wash/", name: "Пінка для вмивання CHANOSUI Matcha Face Wash" },
+    '1347': { price: 875, path: "/ochyshchuvalnyi-hel-chanosui-matcha-cleansing-gel/", name: "Очищувальний гель CHANOSUI Matcha Cleansing Gel" },
+    '1353': { price: 875, path: "/keana-sauna-termalna-enzymna-maska-skrab/", name: "KEANA SAUNA термальна ензимна маска-скраб" },
+    '1348': { price: 265, path: "/ochyshchuvalna-pina-loshi-charcoal-mud-face-wash/", name: "Очищувальна піна Loshi Charcoal Mud Face Wash 120г" },
+    '1351': { price: 915, path: "/premialni-tkanynni-masky-bample-vital-white-enrich/", name: "Преміальні тканинні маски B:ample Vital White Enrich" },
+    '1355': { price: 935, path: "/cosmetex-roland-kankitsu-ohji-cholovichyi-pilinh-hel/", name: "Cosmetex Roland KANKITSU OHJI чоловічий пілінг-гель" },
+    '1356': { price: 675, path: "/cholovicha-pinka-dlia-vmyvannia-cosmetex-roland-kankitsu-ohji-off-facial-clear-whip/", name: "Чоловіча пінка для вмивання Cosmetex Roland KANKITSU OHJI Off Facial Clear Whip" },
+    '1357': { price: 540, path: "/cholovichyi-refil-pinka-dlia-vmyvannia-cosmetex-roland-kankitsu-ohji-off-facial-clear-whip-n-300-ml/", name: "Чоловічий рефіл-пінка для вмивання Cosmetex Roland KANKITSU OHJI Off Facial Clear Whip N 300 мл" },
+    '1358': { price: 810, path: "/off-md-acne-care-whip-cholovicha-likuvalna-pinka/", name: "OFF MD Acne Care Whip — чоловіча лікувальна пінка" },
+    '1359': { price: 690, path: "/cholovicha-pinka-cosmetex-roland-kankitsu-ohji-off-clay-foam/", name: "Чоловіча пінка Cosmetex Roland KANKITSU OHJI Off Clay Foam" },
+    '1360': { price: 525, path: "/pinka-z-vitaminom-c-kankitsu-ohji-melano-search-vita-c-foam/", name: "Пінка з вітаміном C KANKITSU OHJI Melano Search Vita-C Foam" },
+    '1361': { price: 510, path: "/pinka-z-hlynoiu-ta-vuhilliam-avon-doron-daily-esthe-face-wash-charcoal/", name: "Пінка з глиною та вугіллям Avon Doron Daily Esthe Face Wash Charcoal" },
+    '1362': { price: 425, path: "/hlyniana-pinka-z-vitaminom-c-savon-doron-vita-c-face-wash/", name: "Глиняна пінка з вітаміном C Savon Doron Vita-C Face Wash" },
+    '1363': { price: 610, path: "/molochko-dlia-tila-reluce-shiny-freesia-skin-milk-lotion/", name: "Молочко для тіла Reluce Shiny Freesia Skin Milk Lotion" },
+    '1364': { price: 440, path: "/parfumovanyi-krem-dlia-ruk-reluce-shiny-freesia-hand-cream/", name: "Парфумований крем для рук ReLUCE Shiny Freesia Hand Cream" },
+    '1367': { price: 795, path: "/vidnovliuiuchyi-spa-shampun-dlia-hladkosti-ta-blysku-citruspa-neo-smooth-shampoo-470-ml/", name: "Відновлюючий SPA-шампунь для гладкості та блиску CITRUSPA Neo Smooth Shampoo 470 мл" },
+    '1368': { price: 955, path: "/vidnovliuiuchyi-spa-balzam-citruspa-neo-smooth-treatment-470-ml/", name: "Відновлюючий SPA-бальзам CITRUSPA Neo Smooth Treatment 470 мл" },
+    '1369': { price: 75, path: "/nabir-citruspa-neo-smooth-shampun-i-tritment-dlia-vidnovlennia/", name: "Набір CITRUSPA Neo Smooth: шампунь і трітмент для відновлення" },
+    '1370': { price: 955, path: "/yaponskyi-spa-shampun-dlia-zvolozhennia-ta-obiemu-citruspa-airy-moist-470-ml/", name: "Японський SPA-шампунь для зволоження та об’єму Citruspa Airy & Moist 470 мл" },
+    '1371': { price: 955, path: "/lehkyi-zvolozhuiuchyi-kondytsioner-dlia-volossia-briller-citruspa-airy-moist-treatment-470-ml/", name: "Легкий зволожуючий кондиціонер для волосся BRILLER CITRUSPA Airy & Moist Treatment 470 мл" },
+    '1372': { price: 99, path: "/citruspa-airy-moist-shampoo-treatment-nabir-shampun-balzam-10-ml/", name: "CITRUSPA Airy & Moist Shampoo & Treatment — набір шампунь + бальзам 10 мл" },
+    '1373': { price: 955, path: "/zvolozhuvalnyi-shampun-s-free-silky-shampoo-480-ml/", name: "Зволожувальний шампунь S FREE Silky Shampoo 480 мл" },
+    '1349': { price: 915, path: "/premialna-tkanynna-maska-bample-vital-white/", name: "Преміальна тканинна маска B:ample Vital White" },
+    '1354': { price: 555, path: "/cotbye-black-strawberry-pinka-skrab/", name: "Cotbye Black Strawberry — пінка-скраб" },
+    '1365': { price: 617, path: "/losion-molochko-reluce-glow-bouquet-skin-milk-lotion/", name: "Лосьйон-молочко ReLUCE Glow Bouquet Skin Milk Lotion" },
+    '1366': { price: 480, path: "/reluce-glow-bouquet-krem-dlia-ruk/", name: "ReLUCE Glow Bouquet крем для рук" },
+    '1375': { price: 955, path: "/s-free-silky-smooth-spa-balzam-dlia-vidnovlennia-ta-hladkosti-volossia-480-ml/", name: "SPA-бальзам для відновлення та гладкості волосся S FREE Silky Treatment 480 мл" },
+    '1376': { price: 99, path: "/trues-s-free-acid-heat-care-trial-10-ml-2-kyslotno-termichnyi-dohliad-dlia-vidnovlennia-volossia/", name: "TrueS S FREE Acid & Heat Care Trial 10 мл × 2 — кислотно-термічний догляд для відновлення волосся" },
+    '1379': { price: 795, path: "/proteinova-maska-hair-thee-protein-hair-mask/", name: "Протеїнова маска Hair Thee Protein Hair Mask" },
+    '1382': { price: 820, path: "/ochyshchuvalnyi-hel-dlia-zniattia-makiiazhu-latte-botanical-cleanse-gel-300-ml/", name: "Очищувальний гель для зняття макіяжу Latte Botanical Cleanse Gel 300 мл" },
+    '1383': { price: 740, path: "/okholodzhuvalnyi-rolykovyi-hel-cosmetex-roland-junsuhada-japanese-peppermint-cool-roll-on-jelly/", name: "Охолоджувальний роликовий гель Cosmetex Roland JUNSUHADA Japanese Peppermint Cool Roll On Jelly" },
+    '1384': { price: 489, path: "/tryher-sprei-z-yaponskoiu-miatoiu-japanese-peppermint-water-mist/", name: "Тригер-спрей з японською м’ятою Japanese Peppermint Water Mist" },
+    '1385': { price: 795, path: "/japanese-peppermint-amino-shampoo-z-oliieiu-kamelii/", name: "Japanese Peppermint Amino Shampoo з олією камелії" },
+    '1387': { price: 955, path: "/zvolozhuvalnyi-medovyi-shampun-airy-easy-melty-repair-shampoo/", name: "Зволожувальний медовий шампунь Airy & Easy Melty-Repair Shampoo" },
+    '1388': { price: 795, path: "/vidnovliuvalnyi-kondytsioner-airy-easy-melty-repair-treatmen/", name: "Відновлювальний кондиціонер Airy & Easy Melty-Repair Treatmen" },
+    '1390': { price: 555, path: "/dotbye-pore-face-wash-white-enzymna-pinka-proty-chornykh-tsiatok-120h/", name: "dotbye Pore Face Wash White ензимна пінка проти чорних цяток 120г" },
+    '1391': { price: 75, path: "/airy-easy-melty-shampoo-treatment-trial-probnyi-nabir-shampuniu-ta-masky-10ml-x2/", name: "Airy & Easy Melty Shampoo & Treatment Trial пробний набір шампуню та маски 10мл x2" },
+    '1426': { price: 680, path: "/ary-easy-glossy-gel-hliantsevyi-hel-dlia-volossia-z-efektom-wet-hair/", name: "ARY & EASY Glossy Gel — глянцевий гель для волосся з ефектом wet hair" },
+    '1407': { price: 440, path: "/loshi-horse-oil-moist-face-foam-pinka-dlia-vmyvannia-oblychchia-z-kinskym-zhyrom-130-h/", name: "Loshi Horse Oil Moist Face Foam — пінка для вмивання обличчя з кінським жиром, 130 г" },
+    '1402': { price: 525, path: "/loshi-horse-oil-natural-milk-lotion-universalnyi-losion-dlia-oblychchia-ta-tila-z-kinskoiu-oliieiu-485-h/", name: "Loshi Horse Oil Natural Milk Lotion — універсальний лосьйон для обличчя та тіла з кінською олією, 485 г" },
+    '1403': { price: 399, path: "/loshi-moist-aid-urea-skin-cream-zvolozhuvalnyi-krem-dlia-oblychchia-ta-tila-z-sechovynoiu-220-h/", name: "Loshi Moist Aid Urea Skin Cream — зволожувальний крем для обличчя та тіла з сечовиною, 220 г" },
+    '1404': { price: 525, path: "/loshi-horse-oil-ex-skin-cream-krem-z-kinskoiu-oliieiu-ta-platsentoiu-dlia-oblychchia-i-tila/", name: "Loshi Horse Oil EX Skin Cream — крем з кінською олією та плацентою для обличчя і тіла" },
+    '1405': { price: 1850, path: "/loshi-premium-horse-oil-cream-pozhyvnyi-krem-dlia-oblychchia-z-kinskym-zhyrom/", name: "Loshi Premium Horse Oil Cream — поживний крем для обличчя з кінським жиром" },
+    '1406': { price: 699, path: "/loshi-horse-oil-rich-skin-cream-pozhyvnyi-krem-dlia-shkiry-z-kinskym-zhyrom/", name: "Loshi Horse Oil Rich Skin Cream — поживний крем для шкіри з кінським жиром" },
+    '1408': { price: 825, path: "/exosome-glutathione-enrich-lotion-zvolozhuvalnyi-losion-dlia-oblychchia-z-ekzosomamy/", name: "Exosome Glutathione Enrich Lotion — зволожувальний лосьйон для обличчя з екзосомами" },
+    '1409': { price: 525, path: "/b-ample-hyaluronic-niacinamide-lotion-zvolozhuvalnyi-losion-dlia-oblychchia/", name: "B Ample Hyaluronic + Niacinamide Lotion — зволожувальний лосьйон для обличчя" },
+    '1410': { price: 525, path: "/b-ample-vitamin-c-niacinamide-lotion-zvolozhuvalnyi-losion-dlia-oblychchia/", name: "B Ample Vitamin C + Niacinamide Lotion — зволожувальний лосьйон для обличчя" },
+    '1411': { price: 525, path: "/b-ample-retinol-niacinamide-lotion-zvolozhuvalnyi-losion-dlia-oblychchia/", name: "B Ample Retinol + Niacinamide Lotion — зволожувальний лосьйон для обличчя" },
+    '1412': { price: 675, path: "/reluce-prism-lily-skin-milk-lotion-aromatne-molochko-dlia-tila/", name: "ReLUCE Prism Lily Skin Milk Lotion — ароматне молочко для тіла" },
+    '1413': { price: 710, path: "/reluce-glitter-serum-fragrance-prism-lily-parfumovanyi-serum-z-blyskom-dlia-tila-ta-volossia/", name: "ReLUCE Glitter Serum Fragrance Prism Lily — парфумований серум з блиском для тіла та волосся" },
+    '1416': { price: 793, path: "/truest-by-s-free-acid-heat-care-shampoo-vidnovliuvalnyi-shampun-dlia-poshkodzhenoho-volossia/", name: "Truest by S FREE Acid & Heat Care Shampoo — відновлювальний шампунь для пошкодженого волосся" },
+    '1417': { price: 793, path: "/truest-by-s-free-acid-heat-care-treatment-480-ml-vidnovliuvalnyi-kondytsioner-dlia-volossia-yaponiia/", name: "Truest by S FREE Acid & Heat Care Treatment 480 мл — відновлювальний кондиціонер для волосся (Японія)" },
+    '1418': { price: 960, path: "/truest-by-s-free-acid-heat-care-hair-mask-vidnovliuvalna-maska-dlia-poshkodzhenoho-volossia/", name: "Truest by S FREE Acid & Heat Care Hair Mask — відновлювальна маска для пошкодженого волосся" },
+    '1419': { price: 1260, path: "/truest-by-s-free-acid-heat-care-hair-mask-premium-180-h-premialna-vidnovliuvalna-maska-dlia-volossia/", name: "Truest by S FREE Acid & Heat Care Hair Mask Premium 180 г — преміальна відновлювальна маска для волосся" },
+    '1420': { price: 850, path: "/truest-by-s-free-acid-heat-care-hair-oil-vidnovliuvalna-oliia-dlia-volossia-100-ml/", name: "Truest by S FREE Acid & Heat Care Hair Oil — відновлювальна олія для волосся 100 мл" },
+    '1422': { price: 623, path: "/truest-by-s-free-acid-heat-care-hair-treatment-refill-vidnovliuvalnyi-kondytsioner-refil-dlia-volossia/", name: "Truest by S FREE Acid & Heat Care Hair Treatment Refill — відновлювальний кондиціонер-рефіл для волосся" },
+    '1423': { price: 75, path: "/truest-by-s-free-acid-heat-tr-hair-mask-hair-mask-premium-vidnovliuvalna-maska-dlia-volossia/", name: "Truest by S FREE Acid & Heat TR Hair Mask / Hair Mask Premium — відновлювальна маска для волосся" },
+    '1424': { price: 840, path: "/airy-easy-glossy-wax-hliantsevyi-visk-dlia-volossia-z-efektom-wet-hair/", name: "Airy & Easy Glossy Wax — глянцевий віск для волосся з ефектом wet hair" },
+    '1425': { price: 840, path: "/airy-easy-glossy-jelly-molochko-zhele-dlia-stailinhu-volossia-z-efektom-wet-hair/", name: "Airy & Easy Glossy Jelly — молочко-желе для стайлінгу волосся з ефектом wet hair" },
+    '1427': { price: 680, path: "/airy-easy-prism-hair-gelee-hliantseve-zhele-dlia-volossia-z-efektom-wet-hair/", name: "Airy & Easy Prism Hair Gelee — глянцеве желе для волосся з ефектом wet hair" },
+    '1428': { price: 850, path: "/ae-airy-easy-glossy-foam-stailinh-pinka-dlia-volossia-z-efektom-wet-hair/", name: "AE Airy & Easy Glossy Foam — стайлінг-пінка для волосся з ефектом wet hair" },
+    '1429': { price: 1020, path: "/airy-easy-glossy-repair-oil-n-vidnovliuvalna-oliia-dlia-volossia-z-efektom-wet-hair/", name: "Airy & Easy Glossy Repair Oil N — відновлювальна олія для волосся з ефектом wet hair" },
+    '1430': { price: 850, path: "/airy-easy-souffle-hair-balm-balzam-sufle-dlia-ukladky-volossia-z-efektom-wet-hair/", name: "Airy & Easy Souffle Hair Balm — бальзам-суфле для укладки волосся з ефектом wet hair" },
+    '1442': { price: 765, path: "/citruspa-neo-smooth-shampoo-refill-vidnovliuiuchyi-spa-shampun-dlia-volossia-400-ml/", name: "CITRUSPA Neo Smooth Shampoo Refill – відновлюючий SPA-шампунь для волосся 400 мл" },
+    '1441': { price: 765, path: "/citruspa-neo-smooth-treatment-refill-vidnovliuiuchyi-spa-trytment-dlia-volossia-400-ml/", name: "CITRUSPA Neo Smooth Treatment Refill – відновлюючий SPA-тритмент для волосся 400 мл" },
+    '1433': { price: 765, path: "/s-free-silky-smooth-shampoo-refill-rozghladzhuvalnyi-shampun-dlia-volossia/", name: "S FREE Silky Smooth Shampoo (Refill) — розгладжувальний шампунь для волосся" },
+    '1434': { price: 765, path: "/s-free-silky-smooth-treatment-rozghladzhuvalnyi-trytment-dlia-volossia-z-kashemirovym-keratynom/", name: "S FREE Silky Smooth Treatment — розгладжувальний тритмент для волосся з кашеміровим кератином" },
+    '1435': { price: 765, path: "/citruspa-airy-moist-shampoo-refill-zvolozhuvalnyi-shampun-dlia-lehkosti-ta-blysku-volossia/", name: "CITRUSPA Airy & Moist Shampoo (Refill) — зволожувальний шампунь для легкості та блиску волосся" },
+    '1436': { price: 690, path: "/citruspa-airy-moist-treatment-refill-zvolozhuvalnyi-trytment-dlia-lehkosti-ta-miakosti-volossia/", name: "CITRUSPA Airy & Moist Treatment (Refill) — зволожувальний тритмент для легкості та мʼякості волосся" },
+    '1437': { price: 825, path: "/keana-ichigo-cleansing-oil-hidrofilna-oliia-dlia-ochyshchennia-oblychchia/", name: "Keana Ichigo Cleansing Oil — гідрофільна олія для очищення обличчя" },
+    '1438': { price: 1850, path: "/loshi-gold-horse-oil-essence-zvolozhuvalna-esentsiia-dlia-oblychchia-z-kinskoiu-oliieiu-ta-zolotom/", name: "Loshi Gold & Horse Oil Essence — зволожувальна есенція для обличчя з кінською олією та золотом" },
+    '1439': { price: 1050, path: "/loshi-horse-oil-balm-pozhyvnyi-balzam-z-kinskoiu-oliieiu-dlia-sukhoi-shkiry/", name: "Loshi Horse Oil Balm — поживний бальзам з кінською олією для сухої шкіри" },
+    '1414': { price: 440, path: "/reluce-prism-lily-parfumovanyi-krem-dlia-ruk-z-aromatom-frezii-50-h-yaponiia/", name: "ReLUCE Prism Lily — парфумований крем для рук з ароматом фрезії, 50 г (Японія)" },
+    '1421': { price: 622, path: "/truest-by-s-free-acid-heat-care-shampoo-refill-vidnovliuvalnyi-shampun-zminnyi-paket/", name: "Truest by S FREE Acid & Heat Care Shampoo Refill — відновлювальний шампунь (змінний пакет)" },
+    '1516': { price: 690, path: "/cosmetex-roland-reluce-glitter-serum-fragrance-shiny-freesia-blyskucha-aromatyzovana-syrovatka-80-ml/", name: "Cosmetex Roland ReLUCE Glitter Serum Fragrance Shiny Freesia блискуча ароматизована сироватка, 80 мл" },
+    '1517': { price: 99, path: "", name: "" }
+  };
+
+  const TEXTS = {
+    title: '🇯🇵 Акція «Японська косметика Cosmetex Roland»',
+    rule: 'Три товари з розділу «Японська косметика» — найдешевший у подарунок (−100%) + безкоштовна доставка.',
+    progress: 'У кошику {count} з {min}. Додайте ще {left} {word} — і найдешевший отримаєте безкоштовно + безкоштовна доставка.',
+    linkText: 'Перейти до японської косметики →',
+    active: 'Акцію застосовано! Безкоштовно: {list}.',
+    discount: 'Знижка за акцією',
+    total: 'До сплати з урахуванням акції',
+    shipping: '🚚 Безкоштовна доставка активована',
+    rowBadge: '🎁 Безкоштовно за акцією (−100%)',
+    commentTag: '[Акція Японська косметика 3=2]',
+    comment: 'Безкоштовно (−100%): {list}. Знижка: {discount} грн. Сума з урахуванням акції: {total} грн. Безкоштовна доставка.'
+  };
+
+  const SUCCESS_PATHS = ['/checkout/complete', '/checkout/success', '/order/success', '/checkout-success', '/success'];
+
+  const ATTR = 'data-sk-jp';          // позначка всіх наших елементів
+  const BOX_ID = 'sk-jp-promo-box';
+
+  /* =========================
+   * УТИЛІТИ
+   * ========================= */
+
+  function pathKey(url) {
+    try {
+      const path = new URL(url, window.location.origin).pathname;
+      return decodeURIComponent(path).replace(/\/+$/, '').toLowerCase();
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function norm(text) {
+    return String(text || '')
+      .toLowerCase()
+      .replace(/[’ʼ`]/g, '\'')
+      .replace(/[\s  ]+/g, ' ')
+      .trim();
+  }
+
+  function toNumber(value) {
+    if (value === null || value === undefined || value === '') return 0;
+    if (typeof value === 'number') return isFinite(value) ? value : 0;
+    const cleaned = String(value)
+      .replace(/[\s  ]/g, '')
+      .replace(/[^\d,.]/g, '')
+      .replace(',', '.');
+    const n = parseFloat(cleaned);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function round2(n) {
+    return Math.round(n * 100) / 100;
+  }
+
+  function money(n) {
+    const value = round2(n);
+    return new Intl.NumberFormat('uk-UA', {
+      minimumFractionDigits: value % 1 ? 2 : 0,
+      maximumFractionDigits: 2
+    }).format(value);
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function plural(n) {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'товар';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'товари';
+    return 'товарів';
+  }
+
+  function isOurs(node) {
+    if (!node || node.nodeType !== 1) return node && node.nodeType === 3 && isOurs(node.parentNode);
+    return node.hasAttribute(ATTR) || !!(node.closest && node.closest('[' + ATTR + ']'));
+  }
+
+  function isPromoPeriod() {
+    const today = new Date();
+    const day = today.getFullYear() + '-' +
+      String(today.getMonth() + 1).padStart(2, '0') + '-' +
+      String(today.getDate()).padStart(2, '0');
+    if (PROMO.startDate && day < PROMO.startDate) return false;
+    if (PROMO.endDate && day > PROMO.endDate) return false;
+    return true;
+  }
+
+  function storageGet() {
+    try {
+      const raw = window.sessionStorage.getItem(PROMO.storageKey);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function storageSet(value) {
+    try {
+      if (value) window.sessionStorage.setItem(PROMO.storageKey, JSON.stringify(value));
+      else window.sessionStorage.removeItem(PROMO.storageKey);
+    } catch (e) {}
+  }
+
+  /* =========================
+   * РОЗПІЗНАВАННЯ АКЦІЙНИХ ТОВАРІВ
+   * ========================= */
+
+  const byPath = Object.create(null);
+  const byName = Object.create(null);
+  const namesSorted = [];
+  Object.keys(PRODUCTS).forEach(function (article) {
+    const item = PRODUCTS[article];
+    if (item.path) byPath[pathKey(item.path)] = article;
+    if (item.name) {
+      byName[norm(item.name)] = article;
+      namesSorted.push({ name: norm(item.name), article: article });
+    }
+  });
+  namesSorted.sort(function (a, b) { return b.name.length - a.name.length; });
+
+  function articleByText(text) {
+    const t = norm(text);
+    if (!t) return null;
+    if (byName[t]) return byName[t];
+    for (let i = 0; i < namesSorted.length; i++) {
+      if (namesSorted[i].name.length >= 12 && t.indexOf(namesSorted[i].name) !== -1) {
+        return namesSorted[i].article;
+      }
+    }
+    return null;
+  }
+
+  function articleByUrl(url) {
+    const key = pathKey(url);
+    return key ? byPath[key] || null : null;
+  }
+
+  function articleFromAjaxProduct(p) {
+    if (!p || typeof p !== 'object') return null;
+    const articleFields = ['article', 'articul', 'sku', 'code', 'vendor_code', 'vendorCode', 'art'];
+    for (let i = 0; i < articleFields.length; i++) {
+      const v = p[articleFields[i]];
+      if (v !== undefined && v !== null && PRODUCTS[String(v).trim()]) return String(v).trim();
+    }
+    const urlFields = ['link', 'url', 'href', 'uri', 'product_url'];
+    for (let i = 0; i < urlFields.length; i++) {
+      if (typeof p[urlFields[i]] === 'string') {
+        const a = articleByUrl(p[urlFields[i]]);
+        if (a) return a;
+      }
+    }
+    return articleByText(p.title || p.name || '');
+  }
+
+  function getAjaxCart() {
+    try {
+      if (window.AjaxCart && typeof window.AjaxCart.getInstance === 'function') {
+        const cart = window.AjaxCart.getInstance();
+        if (cart && cart.Cart) return cart.Cart;
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  function cartRows() {
+    const rows = [];
+    document.querySelectorAll('.j-cart-product').forEach(function (row) {
+      if (!isOurs(row)) rows.push(row);
+    });
+    return rows;
+  }
+
+  function articleFromRow(row) {
+    const links = row.querySelectorAll('a[href]');
+    for (let i = 0; i < links.length; i++) {
+      const a = articleByUrl(links[i].getAttribute('href'));
+      if (a) return a;
+    }
+    const title = row.querySelector('.cart-item__title, .cart-product__title, [class*="title"], [class*="name"]');
+    return articleByText(title ? title.textContent : '') || articleByText(row.textContent);
+  }
+
+  function rowQuantity(row) {
+    const input = row.querySelector('.j-quantity-p, input[type="number"], input[name*="quantity"]');
+    const q = input ? parseInt(input.value, 10) : NaN;
+    return isNaN(q) || q < 1 ? 1 : q;
+  }
+
+  /* Повертає акційні позиції кошика: [{ article, price, qty, title, rows[] }] */
+  function getPromoLines() {
+    const lines = Object.create(null);
+
+    function line(article) {
+      if (!lines[article]) {
+        lines[article] = {
+          article: article,
+          price: 0,
+          qty: 0,
+          title: PRODUCTS[article].name || ('Артикул ' + article),
+          rows: []
+        };
+      }
+      return lines[article];
+    }
+
+    /* 1. Дані AjaxCart (ціни/кількість) */
+    const cart = getAjaxCart();
+    if (cart && cart.products) {
+      Object.keys(cart.products).forEach(function (hash) {
+        const p = cart.products[hash];
+        const article = articleFromAjaxProduct(p);
+        if (!article) return;
+        const l = line(article);
+        const qty = Math.max(parseInt(p.quantity, 10) || 1, 1);
+        let price = toNumber(p.price_one || p.priceOne || p.price);
+        const listPrice = PRODUCTS[article].price;
+        /* якщо Хорошоп віддав суму за позицію, а не за одиницю */
+        if (qty > 1 && listPrice && Math.abs(price - listPrice * qty) < 1) price = price / qty;
+        if (price > 0 && (!l.price || price < l.price)) l.price = price;
+        l.qty += qty;
+        l.fromAjax = true;
+        if (p.title || p.name) l.title = String(p.title || p.name);
+      });
+    }
+
+    /* 2. Рядки кошика в DOM (для позначок + запасне джерело) */
+    cartRows().forEach(function (row) {
+      const article = articleFromRow(row);
+      if (!article) return;
+      const l = line(article);
+      l.rows.push(row);
+      if (!l.fromAjax) l.qty = Math.max(l.qty, rowQuantity(row));
+    });
+
+    return Object.keys(lines).map(function (article) {
+      const l = lines[article];
+      if (!l.price) l.price = PRODUCTS[article].price || 0;
+      if (!l.qty) l.qty = 1;
+      return l;
+    }).filter(function (l) { return l.price > 0; });
+  }
+
+  function getCartTotal() {
+    const cart = getAjaxCart();
+    if (cart && cart.total && typeof cart.total.sum !== 'undefined') {
+      const sum = toNumber(cart.total.sum);
+      if (sum > 0) return sum;
+    }
+    const els = document.querySelectorAll('.j-total-sum');
+    for (let i = 0; i < els.length; i++) {
+      if (isOurs(els[i])) continue;
+      const sum = toNumber(els[i].textContent);
+      if (sum > 0) return sum;
+    }
+    return 0;
+  }
+
+  /* =========================
+   * РОЗРАХУНОК АКЦІЇ
+   * ========================= */
+
+  function calculate() {
+    const lines = getPromoLines();
+    const sorted = lines.slice().sort(function (a, b) { return b.price - a.price; });
+    const free = [];
+
+    if (isPromoPeriod() && sorted.length >= PROMO.minItems) {
+      if (PROMO.repeatable) {
+        for (let i = PROMO.minItems - 1; i < sorted.length; i += PROMO.minItems) free.push(sorted[i]);
+      } else {
+        free.push(sorted[sorted.length - 1]);
+      }
+    }
+
+    const discount = round2(free.reduce(function (s, l) { return s + l.price; }, 0));
+    const total = getCartTotal();
+
+    return {
+      lines: lines,
+      count: lines.length,
+      free: free,
+      discount: discount,
+      total: total,
+      newTotal: round2(Math.max(total - discount, 0)),
+      active: free.length > 0 && discount > 0
+    };
+  }
+
+  /* =========================
+   * ВІДОБРАЖЕННЯ
+   * ========================= */
+
+  function freeList(result) {
+    return result.free.map(function (l) {
+      return l.title + ' (' + money(l.price) + ' грн)';
+    }).join(', ');
+  }
+
+  function boxHtml(result) {
+    let body;
+    if (result.active) {
+      body =
+        '<div class="sk-jp__text is-success">' + escapeHtml(TEXTS.active.replace('{list}', freeList(result))) + '</div>' +
+        '<div class="sk-jp__row"><span>' + TEXTS.discount + '</span><strong>−' + money(result.discount) + ' грн</strong></div>' +
+        (result.total > 0
+          ? '<div class="sk-jp__row sk-jp__row--total"><span>' + TEXTS.total + '</span><strong>' + money(result.newTotal) + ' грн</strong></div>'
+          : '') +
+        (PROMO.freeShipping ? '<div class="sk-jp__shipping">' + TEXTS.shipping + '</div>' : '');
+    } else {
+      const left = PROMO.minItems - result.count;
+      body =
+        '<div class="sk-jp__text">' + escapeHtml(TEXTS.progress
+          .replace('{count}', result.count)
+          .replace('{min}', PROMO.minItems)
+          .replace('{left}', left)
+          .replace('{word}', plural(left))) + '</div>' +
+        '<div class="sk-jp__progress"><div style="width:' + Math.round(result.count / PROMO.minItems * 100) + '%"></div></div>' +
+        '<a class="sk-jp__link" href="' + PROMO.categoryUrl + '">' + TEXTS.linkText + '</a>';
+    }
+
+    return '<div class="sk-jp ' + (result.active ? 'is-active' : '') + '">' +
+      '<div class="sk-jp__title">' + TEXTS.title + '</div>' +
+      '<div class="sk-jp__rule">' + TEXTS.rule + '</div>' +
+      body +
+    '</div>';
+  }
+
+  function findBoxPlace() {
+    /* 1. Кошик: окремий tbody перед підсумком таблиці (як віджет догляду) */
+    const table = document.querySelector('#cart table.cart-items');
+    const footer = table && table.querySelector('tfoot.cart-foot');
+    if (table && footer) {
+      const care = document.getElementById('sk-care-widget-host');
+      return { type: 'table', table: table, before: care && care.parentNode === table ? care : footer };
+    }
+    /* 2. Сторінка оформлення */
+    const form = document.querySelector('#checkout-container');
+    if (form) {
+      const gift = document.getElementById('gift-from-sum-widget');
+      const anchor = gift || form.querySelector('.form__section--column');
+      if (anchor && anchor.parentNode) return { type: 'before', el: anchor };
+      return { type: 'append', el: form };
+    }
+    /* 3. Будь-який інший кошик */
+    const cartEl = document.querySelector('#cart');
+    if (cartEl) return { type: 'append', el: cartEl };
+    return null;
+  }
+
+  function renderBox(result) {
+    let box = document.getElementById(BOX_ID);
+
+    if (!result.count) {
+      if (box) box.remove();
+      return;
+    }
+
+    const place = findBoxPlace();
+    if (!place) {
+      if (box) box.remove();
+      return;
+    }
+
+    const html = boxHtml(result);
+    const wantTag = place.type === 'table' ? 'TBODY' : 'DIV';
+
+    if (!box || box.tagName !== wantTag) {
+      if (box) box.remove();
+      box = document.createElement(wantTag.toLowerCase());
+      box.id = BOX_ID;
+      box.setAttribute(ATTR, 'box');
+    }
+
+    if (box.getAttribute('data-html') !== html) {
+      box.setAttribute('data-html', html);
+      box.innerHTML = wantTag === 'TBODY'
+        ? '<tr><td colspan="4" class="sk-jp-cell">' + html + '</td></tr>'
+        : html;
+    }
+
+    if (place.type === 'table') {
+      if (box.parentNode !== place.table || box.nextSibling !== place.before) {
+        place.table.insertBefore(box, place.before);
+      }
+    } else if (place.type === 'before') {
+      if (box.nextSibling !== place.el) place.el.parentNode.insertBefore(box, place.el);
+    } else if (box.parentNode !== place.el) {
+      place.el.appendChild(box);
+    }
+  }
+
+  function renderRows(result) {
+    const freeRows = [];
+    result.free.forEach(function (l) {
+      l.rows.forEach(function (row) { freeRows.push(row); });
+    });
+
+    document.querySelectorAll('.sk-jp-free-row').forEach(function (row) {
+      if (freeRows.indexOf(row) !== -1) return;
+      row.classList.remove('sk-jp-free-row');
+      row.querySelectorAll('[' + ATTR + '="badge"]').forEach(function (b) { b.remove(); });
+    });
+
+    freeRows.forEach(function (row) {
+      row.classList.add('sk-jp-free-row');
+      if (row.querySelector('[' + ATTR + '="badge"]')) return;
+      const badge = document.createElement('div');
+      badge.className = 'sk-jp-badge';
+      badge.setAttribute(ATTR, 'badge');
+      badge.textContent = TEXTS.rowBadge;
+      const link = row.querySelector('a[href]:not(:empty)');
+      const place = row.querySelector('.cart-item__content') ||
+        (link && link.parentNode) ||
+        row.querySelector('td') ||
+        row;
+      place.appendChild(badge);
+    });
+  }
+
+  function renderTotals(result) {
+    document.querySelectorAll('.j-total-sum').forEach(function (el) {
+      if (isOurs(el)) return;
+      let next = el.nextElementSibling;
+      const ours = next && next.getAttribute(ATTR) === 'total' ? next : null;
+
+      if (!result.active || !result.total) {
+        el.classList.remove('sk-jp-old-total');
+        if (ours) ours.remove();
+        return;
+      }
+
+      const text = money(result.newTotal) + ' грн';
+      el.classList.add('sk-jp-old-total');
+      if (ours) {
+        if (ours.textContent !== text) ours.textContent = text;
+        return;
+      }
+      next = document.createElement('span');
+      next.className = 'sk-jp-new-total';
+      next.setAttribute(ATTR, 'total');
+      next.textContent = text;
+      el.parentNode.insertBefore(next, el.nextSibling);
+    });
+  }
+
+  function addStyles() {
+    if (document.getElementById('sk-jp-promo-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'sk-jp-promo-styles';
+    style.textContent = '' +
+      '#' + BOX_ID + '{display:block;margin:0 0 16px;width:100%}' +
+      'tbody#' + BOX_ID + '{display:table-row-group;margin:0}' +
+      '#' + BOX_ID + ' .sk-jp-cell{padding:16px 0 4px!important;border:0!important}' +
+      '.sk-jp{box-sizing:border-box;padding:14px;border-radius:14px;background:#fafafa;border:1px solid #e0e0e0;font-family:inherit;color:#222;line-height:1.4}' +
+      '.sk-jp.is-active{background:#fff7fa;border-color:#f0bfd2}' +
+      '.sk-jp__title{font-size:16px;font-weight:700;margin-bottom:4px}' +
+      '.sk-jp__rule{font-size:12px;color:#777;margin-bottom:8px}' +
+      '.sk-jp__text{font-size:13px;color:#555;margin-bottom:8px}' +
+      '.sk-jp__text.is-success{color:#236b35;font-weight:600}' +
+      '.sk-jp__progress{height:7px;background:#eee;border-radius:50px;overflow:hidden;margin-bottom:10px}' +
+      '.sk-jp__progress>div{height:100%;background:linear-gradient(90deg,#e98aae,#d94f83);border-radius:50px;transition:width .3s ease}' +
+      '.sk-jp__link{font-size:13px;font-weight:700;color:#d94f83!important;text-decoration:none!important}' +
+      '.sk-jp__row{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:4px 0}' +
+      '.sk-jp__row strong{color:#d94f83;white-space:nowrap}' +
+      '.sk-jp__row--total{border-top:1px dashed #f0bfd2;margin-top:4px;padding-top:8px;font-size:15px}' +
+      '.sk-jp__shipping{margin-top:8px;padding:8px 10px;border-radius:10px;background:#eef9f0;color:#236b35;font-size:13px;font-weight:700}' +
+      '.sk-jp-badge{display:inline-flex;padding:4px 10px;margin-top:4px;background:#fff7fa;color:#d94f83;border:1px solid #f0bfd2;border-radius:999px;font-size:11px;font-weight:700}' +
+      '.sk-jp-old-total{text-decoration:line-through;opacity:.55;font-size:.85em}' +
+      '.sk-jp-new-total{margin-left:8px;color:#d94f83;font-weight:700;white-space:nowrap}';
+    document.head.appendChild(style);
+  }
+
+  /* =========================
+   * ОФОРМЛЕННЯ ЗАМОВЛЕННЯ
+   * Пишемо акцію в коментар до замовлення, щоб менеджер бачив знижку,
+   * і зберігаємо суму для сторінки успіху (віджет оплати за реквізитами).
+   * ========================= */
+
+  function findCommentField() {
+    return document.querySelector(
+      '#checkout-container textarea[name*="comment" i], textarea[name*="comment" i], #checkout-container textarea'
+    );
+  }
+
+  function prepareOrder() {
+    const result = calculate();
+    const field = findCommentField();
+
+    if (field) {
+      const tag = TEXTS.commentTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      let value = String(field.value || '').replace(new RegExp('\\n*' + tag + '[^\\n]*', 'g'), '').trim();
+      if (result.active) {
+        const line = TEXTS.commentTag + ' ' + TEXTS.comment
+          .replace('{list}', result.free.map(function (l) { return l.title + ' (арт. ' + l.article + ', ' + money(l.price) + ' грн)'; }).join(', '))
+          .replace('{discount}', money(result.discount))
+          .replace('{total}', money(result.newTotal));
+        value = value ? value + '\n' + line : line;
+      }
+      if (field.value !== value) {
+        field.value = value;
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+
+    storageSet(result.active ? {
+      discount: result.discount,
+      fullTotal: result.total,
+      expectedTotal: result.newTotal,
+      savedAt: Date.now()
+    } : null);
+  }
+
+  /* =========================
+   * СТОРІНКА УСПІХУ
+   * Віджет оплати за реквізитами першим читає window.__BANKAPP_ORDER__.amount —
+   * віддаємо йому суму з урахуванням акції.
+   * ========================= */
+
+  function purchaseValueFromDataLayer() {
+    const dl = window.dataLayer;
+    if (!Array.isArray(dl)) return 0;
+    for (let i = dl.length - 1; i >= 0; i--) {
+      const e = dl[i];
+      if (!e || typeof e !== 'object' || !e.ecommerce) continue;
+      const ec = e.ecommerce;
+      if (ec.purchase || ec.transaction_id || e.event === 'purchase') {
+        return toNumber(ec.value) ||
+          toNumber(ec.purchase && ec.purchase.actionField && ec.purchase.actionField.revenue) ||
+          toNumber(ec.revenue);
+      }
+    }
+    return 0;
+  }
+
+  function setupSuccessPage() {
+    const path = window.location.pathname.toLowerCase();
+    if (!SUCCESS_PATHS.some(function (p) { return path.indexOf(p) !== -1; })) return false;
+
+    const saved = storageGet();
+    storageSet(null);
+    if (!saved || !saved.discount || Date.now() - saved.savedAt > PROMO.storageTtlMs) return true;
+    if (window.__BANKAPP_ORDER__) return true;
+
+    const order = {};
+    Object.defineProperty(order, 'amount', {
+      enumerable: true,
+      get: function () {
+        const value = purchaseValueFromDataLayer();
+        if (!value) return saved.expectedTotal;
+        if (Math.abs(value - saved.expectedTotal) < 1) return value;  /* сервер уже врахував знижку */
+        return round2(Math.max(value - saved.discount, 0));
+      }
+    });
+    window.__BANKAPP_ORDER__ = order;
+    return true;
+  }
+
+  /* =========================
+   * ЗАПУСК
+   * ========================= */
+
+  let renderTimer = 0;
+  let followUpTimer = 0;
+  let isRendering = false;
+
+  function render() {
+    if (isRendering) return;
+    isRendering = true;
+    try {
+      const result = calculate();
+      renderRows(result);
+      renderBox(result);
+      renderTotals(result);
+    } catch (e) {
+      console.warn('[JP-PROMO]', e);
+    } finally {
+      isRendering = false;
+    }
+  }
+
+  function scheduleRender() {
+    clearTimeout(renderTimer);
+    renderTimer = setTimeout(render, 250);
+    /* AjaxCart інколи оновлює дані трохи пізніше за DOM */
+    clearTimeout(followUpTimer);
+    followUpTimer = setTimeout(render, 1200);
+  }
+
+  function start() {
+    addStyles();
+    render();
+    scheduleRender();
+
+    new MutationObserver(function (mutations) {
+      if (isRendering) return;
+      const relevant = mutations.some(function (m) {
+        if (isOurs(m.target)) return false;
+        const nodes = Array.prototype.slice.call(m.addedNodes).concat(Array.prototype.slice.call(m.removedNodes));
+        return nodes.some(function (n) { return !isOurs(n) && !(n.nodeType === 1 && n.id === 'sk-jp-promo-styles'); });
+      });
+      if (relevant) scheduleRender();
+    }).observe(document.body, { childList: true, subtree: true });
+
+    document.addEventListener('change', scheduleRender);
+
+    document.addEventListener('click', function (event) {
+      if (event.target.closest && event.target.closest('.j-submit, #checkout-container [type="submit"]')) prepareOrder();
+    }, true);
+    document.addEventListener('submit', function () { prepareOrder(); }, true);
+  }
+
+  if (setupSuccessPage()) return;
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  } else {
+    start();
+  }
+})();
+</script>
