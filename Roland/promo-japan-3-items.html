@@ -1,6 +1,9 @@
 <!-- =====================================================================
-  АКЦІЯ «Японська косметика Cosmetex Roland»: 3 артикули — найдешевший безкоштовно
-  + безкоштовна доставка. Вставити ОКРЕМИМ блоком ПІСЛЯ всіх інших скриптів.
+  АКЦІЯ «Японська косметика Cosmetex Roland» (версія 2)
+  3 товари з акції (можна однакові) — найдешевший безкоштовно + безкоштовна доставка.
+  Рахуються ШТУКИ: 1 артикул × 3 шт., 2 шт. + 1 шт., 1 + 1 + 1 шт. тощо.
+  Вставити ОКРЕМИМ блоком у поле «Скрипти перед закриваючим тегом body»,
+  ПІСЛЯ всіх інших скриптів. Попередню версію цього блоку видалити повністю.
   Інші скрипти не змінює і не зачіпає дані AjaxCart.
   ===================================================================== -->
 <script>
@@ -14,15 +17,21 @@
    * ========================= */
   const ENABLED = true;
   if (!ENABLED) return;
-  if (window.__skJpPromoLoaded) return;
+
+  const VERSION = '2.0';
+  if (window.__skJpPromoLoaded) {
+    console.warn('[JP-PROMO] Скрипт акції вставлено двічі — залиште на сайті лише одну (нову) версію.');
+    return;
+  }
   window.__skJpPromoLoaded = true;
 
   /* =========================
    * НАЛАШТУВАННЯ
    * ========================= */
   const PROMO = {
-    minItems: 3,            // скільки різних артикулів потрібно
-    repeatable: false,      // true = кожен 3-й (6 артикулів → 2 безкоштовні), false = лише один подарунок
+    minItems: 3,            // скільки ШТУК акційних товарів потрібно (можна однакові артикули)
+    repeatable: false,      // false = один подарунок на замовлення (найдешевша 1 шт.)
+                            // true  = кожні 3 шт. дають ще один подарунок (6 шт. → 2 найдешевші шт. безкоштовно)
     freeShipping: true,     // повідомлення про безкоштовну доставку
     startDate: null,        // напр. '2026-10-01' (включно) або null
     endDate: null,          // напр. '2026-10-31' (включно) або null
@@ -119,22 +128,29 @@
 
   const TEXTS = {
     title: '🇯🇵 Акція «Японська косметика Cosmetex Roland»',
-    rule: 'Три товари з розділу «Японська косметика» — найдешевший у подарунок (−100%) + безкоштовна доставка.',
-    progress: 'У кошику {count} з {min}. Додайте ще {left} {word} — і найдешевший отримаєте безкоштовно + безкоштовна доставка.',
+    rule: 'Три товари з розділу «Японська косметика» (можна однакові) — найдешевший у подарунок (−100%) + безкоштовна доставка.',
+    ruleRepeatable: 'Кожні три товари з розділу «Японська косметика» (можна однакові) — найдешевший у подарунок (−100%) + безкоштовна доставка.',
+    progress: 'Акційних товарів у кошику: {count} з {min}. Додайте ще {left} {word} (можна такий самий) — і найдешевший отримаєте безкоштовно + безкоштовна доставка.',
+    nextGift: 'Додайте ще {left} {word} з акції — і отримаєте ще один подарунок.',
     linkText: 'Перейти до японської косметики →',
     active: 'Акцію застосовано! Безкоштовно: {list}.',
+    freeItem: '{title} — {qty} шт. ({amount} грн)',
     discount: 'Знижка за акцією',
     total: 'До сплати з урахуванням акції',
     shipping: '🚚 Безкоштовна доставка активована',
-    rowBadge: '🎁 Безкоштовно за акцією (−100%)',
+    rowBadge: '🎁 Безкоштовно за акцією',
+    rowBadgePartial: '🎁 {qty} шт. безкоштовно за акцією',
     commentTag: '[Акція Японська косметика 3=2]',
-    comment: 'Безкоштовно (−100%): {list}. Знижка: {discount} грн. Сума з урахуванням акції: {total} грн. Безкоштовна доставка.'
+    commentItem: '{title} (арт. {article}) — {qty} шт., {amount} грн',
+    comment: 'Подарунок: {list}. Знижка: {discount} грн. Сума з урахуванням акції: {total} грн. Безкоштовна доставка.'
   };
 
   const SUCCESS_PATHS = ['/checkout/complete', '/checkout/success', '/order/success', '/checkout-success', '/success'];
 
-  const ATTR = 'data-sk-jp';          // позначка всіх наших елементів
+  const ATTR = 'data-sk-jp';                  // позначка всіх наших елементів
   const BOX_ID = 'sk-jp-promo-box';
+  const HEADER_SCOPE = 'header, .header, #header';  // підсумок у шапці сайту не чіпаємо
+  const QTY_INPUTS = '.j-quantity-p, input[type="number"], input[name*="quantity"]';
 
   /* =========================
    * УТИЛІТИ
@@ -153,19 +169,51 @@
     return String(text || '')
       .toLowerCase()
       .replace(/[’ʼ`]/g, '\'')
-      .replace(/[\s  ]+/g, ' ')
+      .replace(/\s+/g, ' ')
       .trim();
   }
 
+  const entityDecoder = document.createElement('textarea');
+  function decodeEntities(text) {
+    const value = String(text == null ? '' : text);
+    if (value.indexOf('&') === -1) return value;
+    entityDecoder.innerHTML = value;
+    return entityDecoder.value;
+  }
+
+  /* Число з рядка: "1 850,00", "1850.00", "1,850.00", "2 146 грн", 1850 */
   function toNumber(value) {
     if (value === null || value === undefined || value === '') return 0;
     if (typeof value === 'number') return isFinite(value) ? value : 0;
-    const cleaned = String(value)
-      .replace(/[\s  ]/g, '')
-      .replace(/[^\d,.]/g, '')
-      .replace(',', '.');
-    const n = parseFloat(cleaned);
+    let raw = String(value).replace(/\s+/g, '').replace(/[^\d,.]/g, '');
+    if (!raw) return 0;
+    const comma = raw.lastIndexOf(',');
+    const dot = raw.lastIndexOf('.');
+    if (comma !== -1 && dot !== -1) {
+      raw = comma > dot ? raw.replace(/\./g, '').replace(',', '.') : raw.replace(/,/g, '');
+    } else if (comma !== -1 || dot !== -1) {
+      const parts = raw.split(comma !== -1 ? ',' : '.');
+      const isThousands = parts.length > 2 ||
+        (parts[1].length === 3 && parts[0].length <= 3 && parts[0] !== '0' && parts[0] !== '');
+      raw = isThousands ? parts.join('') : parts.join('.');
+    }
+    const n = parseFloat(raw);
     return isNaN(n) ? 0 : n;
+  }
+
+  /* Ціна з поля AjaxCart. NaN — якщо поля немає або його неможливо прочитати */
+  function priceValue(value, depth) {
+    depth = depth || 0;
+    if (value === undefined || value === null || value === '' || depth > 3) return NaN;
+    if (typeof value === 'object') {
+      const keys = ['value', 'amount', 'raw', 'price', 'sum'];
+      for (let i = 0; i < keys.length; i++) {
+        if (value[keys[i]] !== undefined) return priceValue(value[keys[i]], depth + 1);
+      }
+      return NaN;
+    }
+    if (typeof value === 'number') return isFinite(value) ? value : NaN;
+    return /\d/.test(String(value)) ? toNumber(value) : NaN;
   }
 
   function round2(n) {
@@ -189,6 +237,13 @@
       .replace(/'/g, '&#039;');
   }
 
+  /* Підстановка {ключ} у шаблон тексту */
+  function fill(template, data) {
+    return String(template).replace(/\{(\w+)\}/g, function (match, key) {
+      return Object.prototype.hasOwnProperty.call(data, key) ? String(data[key]) : match;
+    });
+  }
+
   function plural(n) {
     const mod10 = n % 10;
     const mod100 = n % 100;
@@ -198,8 +253,10 @@
   }
 
   function isOurs(node) {
-    if (!node || node.nodeType !== 1) return node && node.nodeType === 3 && isOurs(node.parentNode);
-    return node.hasAttribute(ATTR) || !!(node.closest && node.closest('[' + ATTR + ']'));
+    if (!node) return false;
+    if (node.nodeType === 3) return isOurs(node.parentNode);
+    if (node.nodeType !== 1) return false;
+    return node.hasAttribute(ATTR) || !!node.closest('[' + ATTR + ']');
   }
 
   function isPromoPeriod() {
@@ -276,8 +333,12 @@
         if (a) return a;
       }
     }
-    return articleByText(p.title || p.name || '');
+    return articleByText(decodeEntities(p.title || p.name || ''));
   }
+
+  /* =========================
+   * ДАНІ КОШИКА
+   * ========================= */
 
   function getAjaxCart() {
     try {
@@ -287,6 +348,60 @@
       }
     } catch (e) {}
     return null;
+  }
+
+  function qtyOf(p) {
+    const q = parseInt(p && p.quantity, 10);
+    if (isNaN(q)) return 1;
+    return q < 0 ? 0 : q;
+  }
+
+  function ajaxTotal(cart) {
+    const sum = priceValue(cart && cart.total && cart.total.sum);
+    return sum > 0 ? sum : 0;
+  }
+
+  /* Хорошоп може віддавати в полі price ціну за 1 шт. або суму позиції.
+   * Визначаємо за загальною сумою кошика: 'unit' | 'line' | '' (невідомо) */
+  function detectPriceMode(products, totalSum) {
+    let sumAsUnit = 0;
+    let sumAsLine = 0;
+    let hasMulti = false;
+    Object.keys(products).forEach(function (hash) {
+      const p = products[hash];
+      if (!p || typeof p !== 'object') return;
+      const q = qtyOf(p);
+      const price = priceValue(p.price);
+      if (isNaN(price)) return;
+      sumAsUnit += price * q;
+      sumAsLine += price;
+      if (q > 1) hasMulti = true;
+    });
+    if (!hasMulti) return 'unit';
+    if (totalSum > 0) {
+      if (Math.abs(sumAsUnit - totalSum) < 1) return 'unit';
+      if (Math.abs(sumAsLine - totalSum) < 1) return 'line';
+    }
+    return '';
+  }
+
+  function unitPriceOf(p, qty, mode, article) {
+    const listPrice = PRODUCTS[article].price || 0;
+    const unitFields = ['price_one', 'priceOne', 'unit_price', 'price_unit'];
+    for (let i = 0; i < unitFields.length; i++) {
+      const explicit = priceValue(p[unitFields[i]]);
+      if (!isNaN(explicit)) return explicit;
+    }
+    const price = priceValue(p.price);
+    if (isNaN(price)) return listPrice;
+    if (qty <= 1 || price <= 0) return price;
+    if (mode === 'unit') return price;
+    if (mode === 'line') return price / qty;
+    if (listPrice) {
+      const ratio = price / listPrice;
+      return Math.abs(ratio - 1) <= Math.abs(ratio - qty) ? price : price / qty;
+    }
+    return price;
   }
 
   function cartRows() {
@@ -308,107 +423,153 @@
   }
 
   function rowQuantity(row) {
-    const input = row.querySelector('.j-quantity-p, input[type="number"], input[name*="quantity"]');
+    const input = row.querySelector(QTY_INPUTS);
     const q = input ? parseInt(input.value, 10) : NaN;
     return isNaN(q) || q < 1 ? 1 : q;
   }
 
-  /* Повертає акційні позиції кошика: [{ article, price, qty, title, rows[] }] */
+  /* Акційні позиції кошика: [{ key, article, qty, price (за 1 шт.), title, rows[] }]
+   * Кожна позиція AjaxCart — окремо (однаковий артикул у кількох штуках = одна позиція з qty) */
   function getPromoLines() {
-    const lines = Object.create(null);
+    const lines = [];
+    const linesByArticle = Object.create(null);
 
-    function line(article) {
-      if (!lines[article]) {
-        lines[article] = {
-          article: article,
-          price: 0,
-          qty: 0,
-          title: PRODUCTS[article].name || ('Артикул ' + article),
-          rows: []
-        };
-      }
-      return lines[article];
+    function addLine(line) {
+      lines.push(line);
+      (linesByArticle[line.article] = linesByArticle[line.article] || []).push(line);
     }
 
-    /* 1. Дані AjaxCart (ціни/кількість) */
+    /* 1. AjaxCart — основне джерело (ціна і кількість) */
     const cart = getAjaxCart();
-    if (cart && cart.products) {
-      Object.keys(cart.products).forEach(function (hash) {
-        const p = cart.products[hash];
+    const products = cart && cart.products && typeof cart.products === 'object' ? cart.products : null;
+    if (products) {
+      const mode = detectPriceMode(products, ajaxTotal(cart));
+      Object.keys(products).forEach(function (hash) {
+        const p = products[hash];
         const article = articleFromAjaxProduct(p);
         if (!article) return;
-        const l = line(article);
-        const qty = Math.max(parseInt(p.quantity, 10) || 1, 1);
-        let price = toNumber(p.price_one || p.priceOne || p.price);
-        const listPrice = PRODUCTS[article].price;
-        /* якщо Хорошоп віддав суму за позицію, а не за одиницю */
-        if (qty > 1 && listPrice && Math.abs(price - listPrice * qty) < 1) price = price / qty;
-        if (price > 0 && (!l.price || price < l.price)) l.price = price;
-        l.qty += qty;
-        l.fromAjax = true;
-        if (p.title || p.name) l.title = String(p.title || p.name);
+        const qty = qtyOf(p);
+        addLine({
+          key: String(hash),
+          article: article,
+          qty: qty,
+          price: unitPriceOf(p, qty, mode, article),
+          title: decodeEntities(p.title || p.name || '') || PRODUCTS[article].name || ('Артикул ' + article),
+          rows: []
+        });
       });
     }
 
-    /* 2. Рядки кошика в DOM (для позначок + запасне джерело) */
+    /* 2. Рядки кошика на сторінці: для позначок «Безкоштовно» + запасне джерело даних */
+    const rowsByArticle = Object.create(null);
+    const rowQty = Object.create(null);
     cartRows().forEach(function (row) {
       const article = articleFromRow(row);
       if (!article) return;
-      const l = line(article);
-      l.rows.push(row);
-      if (!l.fromAjax) l.qty = Math.max(l.qty, rowQuantity(row));
+      (rowsByArticle[article] = rowsByArticle[article] || []).push(row);
+      /* один і той самий товар може бути показаний двічі (попап + оформлення) — беремо max, а не суму */
+      rowQty[article] = Math.max(rowQty[article] || 0, rowQuantity(row));
     });
 
-    return Object.keys(lines).map(function (article) {
-      const l = lines[article];
-      if (!l.price) l.price = PRODUCTS[article].price || 0;
-      if (!l.qty) l.qty = 1;
-      return l;
-    }).filter(function (l) { return l.price > 0; });
+    Object.keys(rowsByArticle).forEach(function (article) {
+      if (!linesByArticle[article]) {
+        addLine({
+          key: 'dom:' + article,
+          article: article,
+          qty: rowQty[article],
+          price: PRODUCTS[article].price || 0,
+          title: PRODUCTS[article].name || ('Артикул ' + article),
+          rows: []
+        });
+      }
+      linesByArticle[article].forEach(function (line) { line.rows = rowsByArticle[article]; });
+    });
+
+    return lines.filter(function (l) { return l.qty > 0 && l.price > 0; });
+  }
+
+  function isHeaderElement(el) {
+    return !!(el.closest && el.closest(HEADER_SCOPE));
   }
 
   function getCartTotal() {
-    const cart = getAjaxCart();
-    if (cart && cart.total && typeof cart.total.sum !== 'undefined') {
-      const sum = toNumber(cart.total.sum);
-      if (sum > 0) return sum;
-    }
+    const sum = ajaxTotal(getAjaxCart());
+    if (sum > 0) return sum;
     const els = document.querySelectorAll('.j-total-sum');
     for (let i = 0; i < els.length; i++) {
-      if (isOurs(els[i])) continue;
-      const sum = toNumber(els[i].textContent);
-      if (sum > 0) return sum;
+      if (isOurs(els[i]) || isHeaderElement(els[i])) continue;
+      const value = toNumber(els[i].textContent);
+      if (value > 0) return value;
     }
     return 0;
   }
 
   /* =========================
    * РОЗРАХУНОК АКЦІЇ
+   * Усі акційні товари розкладаються на штуки. Якщо штук >= minItems —
+   * безкоштовна найдешевша штука (або кожна 3-тя при repeatable: true).
+   *   1 артикул × 3 шт.        → 1 шт. цього артикулу безкоштовно
+   *   А × 2 шт. + Б × 1 шт.    → 1 шт. дешевшого з А/Б безкоштовно
+   *   А + Б + В по 1 шт.       → найдешевший безкоштовно
    * ========================= */
 
   function calculate() {
-    const lines = getPromoLines();
-    const sorted = lines.slice().sort(function (a, b) { return b.price - a.price; });
-    const free = [];
+    const inPeriod = isPromoPeriod();
+    const lines = inPeriod ? getPromoLines() : [];
+    const units = lines.reduce(function (s, l) { return s + l.qty; }, 0);
 
-    if (isPromoPeriod() && sorted.length >= PROMO.minItems) {
-      if (PROMO.repeatable) {
-        for (let i = PROMO.minItems - 1; i < sorted.length; i += PROMO.minItems) free.push(sorted[i]);
-      } else {
-        free.push(sorted[sorted.length - 1]);
-      }
+    const unitsByArticle = Object.create(null);
+    lines.forEach(function (l) { unitsByArticle[l.article] = (unitsByArticle[l.article] || 0) + l.qty; });
+
+    let freeCount = 0;
+    if (units >= PROMO.minItems) {
+      freeCount = PROMO.repeatable ? Math.floor(units / PROMO.minItems) : 1;
     }
 
-    const discount = round2(free.reduce(function (s, l) { return s + l.price; }, 0));
+    /* найдешевші штуки — першими; при однаковій ціні порядок стабільний */
+    const sorted = lines.slice().sort(function (a, b) {
+      if (a.price !== b.price) return a.price - b.price;
+      if (a.article !== b.article) return a.article < b.article ? -1 : 1;
+      return a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
+    });
+
+    const free = [];
+    const freeByArticle = Object.create(null);
+    let left = freeCount;
+    for (let i = 0; i < sorted.length && left > 0; i++) {
+      const l = sorted[i];
+      const qty = Math.min(l.qty, left);
+      left -= qty;
+      let f = freeByArticle[l.article];
+      if (!f) {
+        f = freeByArticle[l.article] = {
+          article: l.article,
+          title: l.title,
+          qty: 0,
+          amount: 0,
+          articleQty: unitsByArticle[l.article],
+          rows: l.rows
+        };
+        free.push(f);
+      }
+      f.qty += qty;
+      f.amount = round2(f.amount + qty * l.price);
+    }
+
+    const discount = round2(free.reduce(function (s, f) { return s + f.amount; }, 0));
     const total = getCartTotal();
+    const nextLeft = PROMO.repeatable && freeCount > 0 ? PROMO.minItems - (units % PROMO.minItems) : 0;
 
     return {
+      inPeriod: inPeriod,
       lines: lines,
-      count: lines.length,
+      units: units,
       free: free,
+      freeCount: freeCount,
       discount: discount,
       total: total,
       newTotal: round2(Math.max(total - discount, 0)),
+      nextLeft: nextLeft,
       active: free.length > 0 && discount > 0
     };
   }
@@ -417,9 +578,9 @@
    * ВІДОБРАЖЕННЯ
    * ========================= */
 
-  function freeList(result) {
-    return result.free.map(function (l) {
-      return l.title + ' (' + money(l.price) + ' грн)';
+  function freeListText(result) {
+    return result.free.map(function (f) {
+      return fill(TEXTS.freeItem, { title: f.title, qty: f.qty, amount: money(f.amount) });
     }).join(', ');
   }
 
@@ -427,33 +588,37 @@
     let body;
     if (result.active) {
       body =
-        '<div class="sk-jp__text is-success">' + escapeHtml(TEXTS.active.replace('{list}', freeList(result))) + '</div>' +
+        '<div class="sk-jp__text is-success">' + escapeHtml(fill(TEXTS.active, { list: freeListText(result) })) + '</div>' +
         '<div class="sk-jp__row"><span>' + TEXTS.discount + '</span><strong>−' + money(result.discount) + ' грн</strong></div>' +
         (result.total > 0
           ? '<div class="sk-jp__row sk-jp__row--total"><span>' + TEXTS.total + '</span><strong>' + money(result.newTotal) + ' грн</strong></div>'
           : '') +
+        (result.nextLeft
+          ? '<div class="sk-jp__hint">' + escapeHtml(fill(TEXTS.nextGift, { left: result.nextLeft, word: plural(result.nextLeft) })) + '</div>'
+          : '') +
         (PROMO.freeShipping ? '<div class="sk-jp__shipping">' + TEXTS.shipping + '</div>' : '');
     } else {
-      const left = PROMO.minItems - result.count;
+      const left = Math.max(PROMO.minItems - result.units, 0);
       body =
-        '<div class="sk-jp__text">' + escapeHtml(TEXTS.progress
-          .replace('{count}', result.count)
-          .replace('{min}', PROMO.minItems)
-          .replace('{left}', left)
-          .replace('{word}', plural(left))) + '</div>' +
-        '<div class="sk-jp__progress"><div style="width:' + Math.round(result.count / PROMO.minItems * 100) + '%"></div></div>' +
+        '<div class="sk-jp__text">' + escapeHtml(fill(TEXTS.progress, {
+          count: result.units,
+          min: PROMO.minItems,
+          left: left,
+          word: plural(left)
+        })) + '</div>' +
+        '<div class="sk-jp__progress"><div style="width:' + Math.min(Math.round(result.units / PROMO.minItems * 100), 100) + '%"></div></div>' +
         '<a class="sk-jp__link" href="' + PROMO.categoryUrl + '">' + TEXTS.linkText + '</a>';
     }
 
     return '<div class="sk-jp ' + (result.active ? 'is-active' : '') + '">' +
       '<div class="sk-jp__title">' + TEXTS.title + '</div>' +
-      '<div class="sk-jp__rule">' + TEXTS.rule + '</div>' +
+      '<div class="sk-jp__rule">' + (PROMO.repeatable ? TEXTS.ruleRepeatable : TEXTS.rule) + '</div>' +
       body +
     '</div>';
   }
 
   function findBoxPlace() {
-    /* 1. Кошик: окремий tbody перед підсумком таблиці (як віджет догляду) */
+    /* 1. Кошик: окремий tbody перед підсумком таблиці (перед віджетом догляду, якщо він є) */
     const table = document.querySelector('#cart table.cart-items');
     const footer = table && table.querySelector('tfoot.cart-foot');
     if (table && footer) {
@@ -477,7 +642,7 @@
   function renderBox(result) {
     let box = document.getElementById(BOX_ID);
 
-    if (!result.count) {
+    if (!result.inPeriod || !result.units) {
       if (box) box.remove();
       return;
     }
@@ -516,37 +681,60 @@
     }
   }
 
+  /* Бейдж ставимо під назвою товару, а не під фото */
+  function placeBadge(row, badge) {
+    const content = row.querySelector('.cart-item__content');
+    if (content) {
+      content.appendChild(badge);
+      return;
+    }
+    const titleEl = row.querySelector('.cart-item__title, .cart-product__title, [class*="title"]');
+    if (titleEl) {
+      if (/^(TD|TH|TR|TBODY)$/.test(titleEl.tagName)) titleEl.appendChild(badge);
+      else titleEl.insertAdjacentElement('afterend', badge);
+      return;
+    }
+    const links = row.querySelectorAll('a[href]');
+    for (let i = 0; i < links.length; i++) {
+      if (norm(links[i].textContent)) {
+        links[i].insertAdjacentElement('afterend', badge);
+        return;
+      }
+    }
+    (row.querySelector('td') || row).appendChild(badge);
+  }
+
   function renderRows(result) {
-    const freeRows = [];
-    result.free.forEach(function (l) {
-      l.rows.forEach(function (row) { freeRows.push(row); });
+    const badges = new Map();   // рядок кошика → текст бейджа
+    result.free.forEach(function (f) {
+      const text = f.qty >= f.articleQty ? TEXTS.rowBadge : fill(TEXTS.rowBadgePartial, { qty: f.qty });
+      f.rows.forEach(function (row) { badges.set(row, text); });
     });
 
     document.querySelectorAll('.sk-jp-free-row').forEach(function (row) {
-      if (freeRows.indexOf(row) !== -1) return;
+      if (badges.has(row)) return;
       row.classList.remove('sk-jp-free-row');
       row.querySelectorAll('[' + ATTR + '="badge"]').forEach(function (b) { b.remove(); });
     });
 
-    freeRows.forEach(function (row) {
+    badges.forEach(function (text, row) {
       row.classList.add('sk-jp-free-row');
-      if (row.querySelector('[' + ATTR + '="badge"]')) return;
+      const current = row.querySelector('[' + ATTR + '="badge"]');
+      if (current) {
+        if (current.textContent !== text) current.textContent = text;
+        return;
+      }
       const badge = document.createElement('div');
       badge.className = 'sk-jp-badge';
       badge.setAttribute(ATTR, 'badge');
-      badge.textContent = TEXTS.rowBadge;
-      const link = row.querySelector('a[href]:not(:empty)');
-      const place = row.querySelector('.cart-item__content') ||
-        (link && link.parentNode) ||
-        row.querySelector('td') ||
-        row;
-      place.appendChild(badge);
+      badge.textContent = text;
+      placeBadge(row, badge);
     });
   }
 
   function renderTotals(result) {
     document.querySelectorAll('.j-total-sum').forEach(function (el) {
-      if (isOurs(el)) return;
+      if (isOurs(el) || isHeaderElement(el)) return;
       let next = el.nextElementSibling;
       const ours = next && next.getAttribute(ATTR) === 'total' ? next : null;
 
@@ -574,6 +762,7 @@
     if (document.getElementById('sk-jp-promo-styles')) return;
     const style = document.createElement('style');
     style.id = 'sk-jp-promo-styles';
+    style.setAttribute(ATTR, 'styles');
     style.textContent = '' +
       '#' + BOX_ID + '{display:block;margin:0 0 16px;width:100%}' +
       'tbody#' + BOX_ID + '{display:table-row-group;margin:0}' +
@@ -590,8 +779,9 @@
       '.sk-jp__row{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:4px 0}' +
       '.sk-jp__row strong{color:#d94f83;white-space:nowrap}' +
       '.sk-jp__row--total{border-top:1px dashed #f0bfd2;margin-top:4px;padding-top:8px;font-size:15px}' +
+      '.sk-jp__hint{margin-top:6px;font-size:12px;color:#555}' +
       '.sk-jp__shipping{margin-top:8px;padding:8px 10px;border-radius:10px;background:#eef9f0;color:#236b35;font-size:13px;font-weight:700}' +
-      '.sk-jp-badge{display:inline-flex;padding:4px 10px;margin-top:4px;background:#fff7fa;color:#d94f83;border:1px solid #f0bfd2;border-radius:999px;font-size:11px;font-weight:700}' +
+      '.sk-jp-badge{display:inline-flex;padding:4px 10px;margin-top:4px;background:#fff7fa;color:#d94f83;border:1px solid #f0bfd2;border-radius:999px;font-size:11px;font-weight:700;line-height:1.3}' +
       '.sk-jp-old-total{text-decoration:line-through;opacity:.55;font-size:.85em}' +
       '.sk-jp-new-total{margin-left:8px;color:#d94f83;font-weight:700;white-space:nowrap}';
     document.head.appendChild(style);
@@ -599,33 +789,65 @@
 
   /* =========================
    * ОФОРМЛЕННЯ ЗАМОВЛЕННЯ
-   * Пишемо акцію в коментар до замовлення, щоб менеджер бачив знижку,
-   * і зберігаємо суму для сторінки успіху (віджет оплати за реквізитами).
+   * Пишемо акцію в коментар до замовлення (лише у формі оформлення),
+   * щоб менеджер бачив знижку, і зберігаємо суму для сторінки успіху.
    * ========================= */
 
-  function findCommentField() {
-    return document.querySelector(
-      '#checkout-container textarea[name*="comment" i], textarea[name*="comment" i], #checkout-container textarea'
-    );
+  /* Форма оформлення, до якої належить кнопка/форма; null — якщо це інша форма сайту */
+  function checkoutScope(from) {
+    if (!from || from.nodeType !== 1) return null;
+    const container = document.getElementById('checkout-container');
+    if (container) {
+      return container.contains(from) || from.contains(container) ? container : null;
+    }
+    if (/\/(checkout|order)/i.test(window.location.pathname)) return from.closest('form');
+    return null;
   }
 
-  function prepareOrder() {
+  function describeField(el) {
+    let text = [el.name, el.id, el.placeholder, el.getAttribute('aria-label')].join(' ');
+    if (el.id && window.CSS && CSS.escape) {
+      const label = document.querySelector('label[for="' + CSS.escape(el.id) + '"]');
+      if (label) text += ' ' + label.textContent;
+    }
+    const wrap = el.closest('label, .form-item, .form__item, .form-group, .field');
+    if (wrap) text += ' ' + String(wrap.textContent || '').slice(0, 200);
+    return text;
+  }
+
+  function findCommentField(scope) {
+    if (!scope) return null;
+    const byNameAttr = scope.querySelector('textarea[name*="comment" i]');
+    if (byNameAttr) return byNameAttr;
+    const areas = scope.querySelectorAll('textarea');
+    for (let i = 0; i < areas.length; i++) {
+      if (/comment|коментар|комментар|приміт|примечан|побажан|пожелан/i.test(describeField(areas[i]))) return areas[i];
+    }
+    return areas.length === 1 ? areas[0] : null;
+  }
+
+  function prepareOrder(scope) {
     const result = calculate();
-    const field = findCommentField();
+    const field = findCommentField(scope);
 
     if (field) {
       const tag = TEXTS.commentTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       let value = String(field.value || '').replace(new RegExp('\\n*' + tag + '[^\\n]*', 'g'), '').trim();
       if (result.active) {
-        const line = TEXTS.commentTag + ' ' + TEXTS.comment
-          .replace('{list}', result.free.map(function (l) { return l.title + ' (арт. ' + l.article + ', ' + money(l.price) + ' грн)'; }).join(', '))
-          .replace('{discount}', money(result.discount))
-          .replace('{total}', money(result.newTotal));
+        const list = result.free.map(function (f) {
+          return fill(TEXTS.commentItem, { title: f.title, article: f.article, qty: f.qty, amount: money(f.amount) });
+        }).join('; ');
+        const line = TEXTS.commentTag + ' ' + fill(TEXTS.comment, {
+          list: list,
+          discount: money(result.discount),
+          total: money(result.newTotal)
+        });
         value = value ? value + '\n' + line : line;
       }
       if (field.value !== value) {
         field.value = value;
         field.dispatchEvent(new Event('input', { bubbles: true }));
+        field.dispatchEvent(new Event('change', { bubbles: true }));
       }
     }
 
@@ -688,11 +910,8 @@
 
   let renderTimer = 0;
   let followUpTimer = 0;
-  let isRendering = false;
 
   function render() {
-    if (isRendering) return;
-    isRendering = true;
     try {
       const result = calculate();
       renderRows(result);
@@ -700,18 +919,48 @@
       renderTotals(result);
     } catch (e) {
       console.warn('[JP-PROMO]', e);
-    } finally {
-      isRendering = false;
     }
   }
 
   function scheduleRender() {
     clearTimeout(renderTimer);
     renderTimer = setTimeout(render, 250);
-    /* AjaxCart інколи оновлює дані трохи пізніше за DOM */
+    /* AjaxCart інколи оновлює дані трохи пізніше за сторінку */
     clearTimeout(followUpTimer);
     followUpTimer = setTimeout(render, 1200);
   }
+
+  /* Відбиток даних AjaxCart: зміна кількості/ціни/складу → перерахунок */
+  function cartDataSignature() {
+    const cart = getAjaxCart();
+    if (!cart) return '';
+    try {
+      const products = cart.products || {};
+      return Object.keys(products).map(function (hash) {
+        const p = products[hash] || {};
+        return hash + ':' + p.quantity + ':' + JSON.stringify(p.price);
+      }).join(';') + '|' + JSON.stringify(cart.total && cart.total.sum);
+    } catch (e) {
+      return '';
+    }
+  }
+
+  /* Для перевірки в консолі браузера: __skJpPromo.check() */
+  window.__skJpPromo = {
+    version: VERSION,
+    check: function () {
+      const r = calculate();
+      return {
+        active: r.active,
+        units: r.units,
+        discount: r.discount,
+        total: r.total,
+        newTotal: r.newTotal,
+        lines: r.lines.map(function (l) { return { article: l.article, title: l.title, qty: l.qty, price: l.price }; }),
+        free: r.free.map(function (f) { return { article: f.article, title: f.title, qty: f.qty, amount: f.amount }; })
+      };
+    }
+  };
 
   function start() {
     addStyles();
@@ -719,21 +968,42 @@
     scheduleRender();
 
     new MutationObserver(function (mutations) {
-      if (isRendering) return;
       const relevant = mutations.some(function (m) {
         if (isOurs(m.target)) return false;
         const nodes = Array.prototype.slice.call(m.addedNodes).concat(Array.prototype.slice.call(m.removedNodes));
-        return nodes.some(function (n) { return !isOurs(n) && !(n.nodeType === 1 && n.id === 'sk-jp-promo-styles'); });
+        return nodes.some(function (n) { return !isOurs(n); });
       });
       if (relevant) scheduleRender();
     }).observe(document.body, { childList: true, subtree: true });
 
+    /* Будь-яка дія в кошику (+/−, видалення, зміна кількості) → перерахунок */
+    document.addEventListener('click', scheduleRender);
     document.addEventListener('change', scheduleRender);
+    document.addEventListener('input', function (event) {
+      const t = event.target;
+      if (t && t.matches && t.matches(QTY_INPUTS)) scheduleRender();
+    });
 
+    let lastSignature = cartDataSignature();
+    setInterval(function () {
+      const signature = cartDataSignature();
+      if (signature !== lastSignature) {
+        lastSignature = signature;
+        scheduleRender();
+      }
+    }, 1000);
+
+    /* Оформлення замовлення: коментар для менеджера + сума для сторінки успіху */
     document.addEventListener('click', function (event) {
-      if (event.target.closest && event.target.closest('.j-submit, #checkout-container [type="submit"]')) prepareOrder();
+      const button = event.target && event.target.closest &&
+        event.target.closest('.j-submit, button[type="submit"], input[type="submit"]');
+      const scope = button && checkoutScope(button);
+      if (scope) prepareOrder(scope);
     }, true);
-    document.addEventListener('submit', function () { prepareOrder(); }, true);
+    document.addEventListener('submit', function (event) {
+      const scope = checkoutScope(event.target);
+      if (scope) prepareOrder(scope);
+    }, true);
   }
 
   if (setupSuccessPage()) return;
