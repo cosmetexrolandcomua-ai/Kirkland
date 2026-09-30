@@ -27,7 +27,7 @@
     showBanner: true,         // смуга над шапкою на всіх сторінках
     showModal: true,          // вікно по центру — 1 раз за візит (можна закрити)
     replaceEmptyCatalog: true,// замість «Немає товарів» у каталозі — картка з поясненням
-    phone: '0730205577',
+    phone: '0730205577',      // номер Viber (формат 0XXXXXXXXX)
     email: 'skinelcosmo@gmail.com',
     /* де НЕ показувати (кошик, оформлення, успіх, кабінет) — щоб не заважати замовленням */
     excludePaths: ['/cart', '/basket', '/checkout', '/order', '/onepcheckout', '/quick-order', '/success', '/profile', '/account', '/login', '/register']
@@ -35,22 +35,24 @@
 
   const TEXTS = {
     ua: {
-      banner: '🛠 Сайт на технічному обслуговуванні. Замовлення тимчасово не приймаємо. Дякуємо за розуміння та бажаємо вам спокійного дня! 💛 Питання:',
+      banner: '🛠 Сайт на технічному обслуговуванні. Замовлення тимчасово не приймаємо. Дякуємо за розуміння та бажаємо вам спокійного дня! 💛 Питання — пишіть нам у',
       title: 'Сайт на технічному обслуговуванні',
       text: 'Ми оновлюємо сайт, тому замовлення тимчасово не приймаємо. Дуже скоро все запрацює у звичному режимі.',
-      contact: 'Дякуємо за розуміння та бажаємо вам спокійного дня! 💛<br>Якщо маєте запитання — зателефонуйте нам:',
+      contact: 'Дякуємо за розуміння та бажаємо вам спокійного дня! 💛<br>Якщо маєте запитання — напишіть нам:',
       emptyTitle: 'Каталог оновлюється',
-      emptyText: 'Замовлення тимчасово не приймаємо. Дякуємо за розуміння та бажаємо вам спокійного дня! 💛<br>З питань можна зателефонувати:',
+      emptyText: 'Замовлення тимчасово не приймаємо. Дякуємо за розуміння та бажаємо вам спокійного дня! 💛<br>З питань — напишіть нам:',
+      viber: 'Написати у Viber',
       close: 'Дякую, зрозуміло',
       closeLabel: 'Закрити'
     },
     ru: {
-      banner: '🛠 Сайт на техническом обслуживании. Заказы временно не принимаем. Спасибо за понимание и желаем вам спокойного дня! 💛 Вопросы:',
+      banner: '🛠 Сайт на техническом обслуживании. Заказы временно не принимаем. Спасибо за понимание и желаем вам спокойного дня! 💛 Вопросы — пишите нам в',
       title: 'Сайт на техническом обслуживании',
       text: 'Мы обновляем сайт, поэтому заказы временно не принимаем. Совсем скоро всё заработает в обычном режиме.',
-      contact: 'Спасибо за понимание и желаем вам спокойного дня! 💛<br>Если у вас есть вопросы — позвоните нам:',
+      contact: 'Спасибо за понимание и желаем вам спокойного дня! 💛<br>Если у вас есть вопросы — напишите нам:',
       emptyTitle: 'Каталог обновляется',
-      emptyText: 'Заказы временно не принимаем. Спасибо за понимание и желаем вам спокойного дня! 💛<br>По вопросам можно позвонить:',
+      emptyText: 'Заказы временно не принимаем. Спасибо за понимание и желаем вам спокойного дня! 💛<br>По вопросам — напишите нам:',
+      viber: 'Написать в Viber',
       close: 'Спасибо, понятно',
       closeLabel: 'Закрыть'
     }
@@ -85,7 +87,7 @@
   }
 
   const T = TEXTS[lang()];
-  const phoneHref = 'tel:+38' + CONFIG.phone.replace(/\D/g, '').replace(/^38/, '');
+  const viberHref = 'viber://chat?number=%2B38' + CONFIG.phone.replace(/\D/g, '').replace(/^38/, '');
 
   /* =========================
    * ЕЛЕМЕНТИ
@@ -102,7 +104,7 @@
       '.sk-mnt-card__icon{font-size:34px;line-height:1;margin-bottom:8px}' +
       '.sk-mnt-card__title{font-size:20px;font-weight:700;margin-bottom:8px}' +
       '.sk-mnt-card__text{font-size:14px;color:#5a4a40;margin-bottom:12px}' +
-      '.sk-mnt-card__phone{display:inline-block;padding:10px 22px;border-radius:999px;background:#2e211b;color:#fff!important;font-weight:700;text-decoration:none!important}' +
+      '.sk-mnt-card__phone{display:inline-block;padding:10px 22px;border-radius:999px;background:#7360f2;color:#fff!important;font-weight:700;text-decoration:none!important}' +
       '.sk-mnt-card__mail{display:block;margin-top:8px;font-size:13px;color:#7a6556!important}' +
       '.sk-mnt-overlay{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(30,20,15,.55)}' +
       '.sk-mnt-overlay .sk-mnt-card{position:relative;margin:0;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25)}' +
@@ -117,7 +119,7 @@
       '<div class="sk-mnt-card__title">' + title + '</div>' +
       '<div class="sk-mnt-card__text">' + text + '</div>' +
       (withContacts ? '<div class="sk-mnt-card__text">' + T.contact + '</div>' : '') +
-      '<a class="sk-mnt-card__phone" href="' + phoneHref + '">📞 ' + CONFIG.phone + '</a>' +
+      '<a class="sk-mnt-card__phone" href="' + viberHref + '">💬 ' + T.viber + '</a>' +
       (CONFIG.email ? '<a class="sk-mnt-card__mail" href="mailto:' + CONFIG.email + '">' + CONFIG.email + '</a>' : '');
   }
 
@@ -127,7 +129,7 @@
     banner.className = 'sk-mnt-banner';
     banner.setAttribute(ATTR, 'banner');
     banner.setAttribute('role', 'status');
-    banner.innerHTML = T.banner + ' <a href="' + phoneHref + '">' + CONFIG.phone + '</a>';
+    banner.innerHTML = T.banner + ' <a href="' + viberHref + '">Viber</a>';
     document.body.insertBefore(banner, document.body.firstChild);
   }
 
