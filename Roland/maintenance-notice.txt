@@ -1,4 +1,4 @@
-<!-- SKINEL-MNT v6: повідомлення «Сайт на техобслуговуванні». Лише CSS, без HTML-елементів і без JavaScript — не змінює сторінку, меню та скрипти. Вставити в поле «Скрипти всередині тегу <head>». Щоб прибрати — видаліть цей блок. -->
+<!-- SKINEL-MNT v7: повідомлення «Сайт на техобслуговуванні». Лише CSS, без HTML-елементів і без JavaScript — не змінює сторінку, меню та скрипти. Вставити в поле «Скрипти всередині тегу <head>». Щоб прибрати — видаліть цей блок. -->
 <style>
   /* Смуга складається з трьох частин (знизу вгору): імейл → текст → заголовок */
 
@@ -29,7 +29,7 @@
     position:fixed;left:0;right:0;bottom:136px;z-index:2147482001;
     box-sizing:border-box;width:100%;margin:0;padding:18px 20px 4px;
     background:#2e211b;border-top:6px solid #e9a36b;box-shadow:0 -8px 30px rgba(0,0,0,.35);
-    color:#ffd9b8;font-family:Arial,Helvetica,sans-serif;font-size:26px;font-weight:800;line-height:1.25;text-align:center;
+    color:#ffd9b8;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:800;line-height:1.25;text-align:center;
     pointer-events:none;
   }
 
@@ -38,16 +38,21 @@
 
   html{padding-bottom:230px}
 
-  /* телефони */
+  /* телефони: розміри як у мобільній смузі на затвердженому скріні */
   @media (max-width:768px){
-    head::after{height:42px;padding:0 14px 14px;font-size:17px}
-    html::after{bottom:42px;height:110px;padding:4px 16px 0;font-size:16px}
-    html::before{bottom:152px;padding:16px 56px 4px;font-size:23px}
-    html{padding-bottom:270px}
+    head::after{height:37px;padding:0 14px 16px;font-size:14px;line-height:21px}
+    html::after{bottom:37px;height:92px;padding:6px 16px 0;font-size:14px;line-height:1.5}
+    html::before{bottom:129px;padding:16px 52px 2px;font-size:19px;line-height:1.25}
+    html{padding-bottom:230px}
+  }
+  @media (max-width:400px){
+    html::after{height:94px}
+    html::before{bottom:131px}
+    html{padding-bottom:235px}
   }
   @media (max-width:360px){
-    html::after{height:144px;font-size:15px}
-    html::before{bottom:186px;padding:14px 20px 4px;font-size:20px}
-    html{padding-bottom:320px}
+    html::after{height:116px}
+    html::before{bottom:153px;padding:14px 20px 2px}
+    html{padding-bottom:255px}
   }
 </style>
