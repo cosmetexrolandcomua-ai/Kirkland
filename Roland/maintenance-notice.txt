@@ -1,5 +1,6 @@
-<!-- SKINEL: повідомлення «Сайт на техобслуговуванні». Без JavaScript: не впливає на роботу сторінок, інших скриптів і акцій. Щоб прибрати — видаліть цей блок. -->
+<!-- SKINEL-MNT v3: повідомлення «Сайт на техобслуговуванні». Без JavaScript. Весь блок в одній обгортці з position:fixed — не займає місця у верстці (шапку не розтягує). Щоб прибрати — видаліть цей блок. -->
 <style>
+  #sk-mnt-root{position:fixed!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;width:auto!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:visible!important;z-index:2147482000!important;display:block!important;float:none!important;transform:none!important}
   #sk-mnt-close{position:absolute!important;opacity:0!important;pointer-events:none!important;width:1px!important;height:1px!important;margin:0!important}
   #sk-mnt-bar{position:fixed!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;z-index:2147482000!important;display:block!important;box-sizing:border-box!important;width:100%!important;min-height:120px!important;margin:0!important;padding:22px 64px 22px 24px!important;background:#2e211b!important;border-top:6px solid #e9a36b!important;color:#fff!important;font-family:inherit;text-align:center!important;box-shadow:0 -8px 30px rgba(0,0,0,.35)!important}
   #sk-mnt-bar .sk-mnt-title{display:block!important;margin:0 0 8px!important;font-size:24px!important;font-weight:800!important;line-height:1.25!important;color:#ffd9b8!important;letter-spacing:.2px}
@@ -17,6 +18,7 @@
     #sk-mnt-bar .sk-mnt-x{top:8px!important;right:8px!important;width:36px!important;height:36px!important;line-height:36px!important;font-size:24px!important}
   }
 </style>
+<div id="sk-mnt-root">
 <input type="checkbox" id="sk-mnt-close" aria-hidden="true" tabindex="-1">
 <div id="sk-mnt-bar" role="status">
   <div class="sk-mnt-ua">
@@ -28,4 +30,5 @@
     <span class="sk-mnt-text">Заказы временно не принимаем. Спасибо за понимание и желаем вам спокойного дня! 💛<br>Если у вас есть вопросы — напишите нам: <a href="mailto:skinelcosmo@gmail.com">skinelcosmo@gmail.com</a></span>
   </div>
   <label class="sk-mnt-x" for="sk-mnt-close" title="Закрити">×</label>
+</div>
 </div>
