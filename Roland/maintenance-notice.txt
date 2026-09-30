@@ -1,29 +1,53 @@
-<!-- SKINEL-MNT v5: повідомлення «Сайт на техобслуговуванні». Лише CSS, без HTML-елементів і без JavaScript — не змінює сторінку, меню та скрипти. Вставити в поле «Скрипти всередині тегу <head>». Щоб прибрати — видаліть цей блок. -->
+<!-- SKINEL-MNT v6: повідомлення «Сайт на техобслуговуванні». Лише CSS, без HTML-елементів і без JavaScript — не змінює сторінку, меню та скрипти. Вставити в поле «Скрипти всередині тегу <head>». Щоб прибрати — видаліть цей блок. -->
 <style>
-  /* заголовок (персиковий) — верхня частина смуги */
-  html::before{
-    content:"🛠 Сайт на технічному обслуговуванні";
-    position:fixed;left:0;right:0;bottom:100px;z-index:2147482001;
-    box-sizing:border-box;width:100%;margin:0;padding:18px 20px 4px;
-    background:#2e211b;border-top:6px solid #e9a36b;box-shadow:0 -8px 30px rgba(0,0,0,.35);
-    color:#ffd9b8;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:800;line-height:1.25;text-align:center;
-    pointer-events:none;
-  }
-  /* основний текст (білий) — нижня частина смуги */
-  html::after{
-    content:"Замовлення тимчасово не приймаємо. Дякуємо за розуміння та бажаємо вам спокійного дня! 💛\A Якщо маєте запитання — напишіть нам: skinelcosmo@gmail.com";
+  /* Смуга складається з трьох частин (знизу вгору): імейл → текст → заголовок */
+
+  /* 1. імейл (персиковий, підкреслений) — найнижчий рядок */
+  head{display:block!important;height:0!important;overflow:visible!important}
+  head::after{
+    content:"skinelcosmo@gmail.com";
     position:fixed;left:0;right:0;bottom:0;z-index:2147482000;
-    box-sizing:border-box;width:100%;height:100px;margin:0;padding:8px 20px 12px;overflow:hidden;
+    box-sizing:border-box;width:100%;height:44px;margin:0;padding:0 20px 16px;
     background:#2e211b;
-    color:#fff;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:600;line-height:1.5;text-align:center;
+    color:#ffd9b8;font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;line-height:28px;text-align:center;
+    text-decoration:underline;text-underline-offset:3px;pointer-events:none;
+  }
+
+  /* 2. основний текст (білий) */
+  html::after{
+    content:"Замовлення тимчасово не приймаємо.\A Дякуємо за розуміння та бажаємо вам спокійного дня! 💛\A Якщо маєте запитання — напишіть нам:";
+    position:fixed;left:0;right:0;bottom:44px;z-index:2147482000;
+    box-sizing:border-box;width:100%;height:92px;margin:0;padding:6px 20px 0;overflow:hidden;
+    background:#2e211b;
+    color:#fff;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:700;line-height:1.5;text-align:center;
     white-space:pre-line;pointer-events:none;
   }
+
+  /* 3. заголовок (персиковий) — верхня частина смуги */
+  html::before{
+    content:"🛠 Сайт на технічному обслуговуванні";
+    position:fixed;left:0;right:0;bottom:136px;z-index:2147482001;
+    box-sizing:border-box;width:100%;margin:0;padding:18px 20px 4px;
+    background:#2e211b;border-top:6px solid #e9a36b;box-shadow:0 -8px 30px rgba(0,0,0,.35);
+    color:#ffd9b8;font-family:Arial,Helvetica,sans-serif;font-size:26px;font-weight:800;line-height:1.25;text-align:center;
+    pointer-events:none;
+  }
+
   html[lang^="ru"]::before{content:"🛠 Сайт на техническом обслуживании"}
-  html[lang^="ru"]::after{content:"Заказы временно не принимаем. Спасибо за понимание и желаем вам спокойного дня! 💛\A Если у вас есть вопросы — напишите нам: skinelcosmo@gmail.com"}
-  html{padding-bottom:170px}
+  html[lang^="ru"]::after{content:"Заказы временно не принимаем.\A Спасибо за понимание и желаем вам спокойного дня! 💛\A Если у вас есть вопросы — напишите нам:"}
+
+  html{padding-bottom:230px}
+
+  /* телефони */
   @media (max-width:768px){
-    html::before{bottom:150px;padding:14px 14px 4px;font-size:19px}
-    html::after{height:150px;padding:6px 14px 10px;font-size:14px}
-    html{padding-bottom:220px}
+    head::after{height:42px;padding:0 14px 14px;font-size:17px}
+    html::after{bottom:42px;height:110px;padding:4px 16px 0;font-size:16px}
+    html::before{bottom:152px;padding:16px 56px 4px;font-size:23px}
+    html{padding-bottom:270px}
+  }
+  @media (max-width:360px){
+    html::after{height:144px;font-size:15px}
+    html::before{bottom:186px;padding:14px 20px 4px;font-size:20px}
+    html{padding-bottom:320px}
   }
 </style>
