@@ -1,0 +1,218 @@
+<!-- =====================================================================
+  SKINEL: ПОВІДОМЛЕННЯ «САЙТ НА ТЕХОБСЛУГОВУВАННІ»
+  Вставити ОКРЕМИМ блоком у поле «Скрипти перед закриваючим тегом body»
+  (у самий кінець, після блоку акцій). Інші скрипти та акції не зачіпає:
+  не показується в кошику, на оформленні та сторінці «Дякуємо за замовлення».
+  Вимкнути: ENABLED = false (або вказати endDate — вимкнеться сам).
+  ===================================================================== -->
+<script>
+(function () {
+  'use strict';
+
+  /* =========================
+   * ГОЛОВНИЙ ВИМИКАЧ
+   * ========================= */
+  const ENABLED = true;
+  if (!ENABLED) return;
+  if (window.__skMaintenanceLoaded) return;
+  window.__skMaintenanceLoaded = true;
+
+  /* =========================
+   * НАЛАШТУВАННЯ
+   * ========================= */
+  const CONFIG = {
+    endDate: null,            // напр. '2026-10-15' — з наступного дня повідомлення зникне саме; null = поки не вимкнете
+    showBanner: true,         // смуга над шапкою на всіх сторінках
+    showModal: true,          // вікно по центру — 1 раз за візит (можна закрити)
+    replaceEmptyCatalog: true,// замість «Немає товарів» у каталозі — картка з поясненням
+    phone: '0730205577',
+    email: 'skinelcosmo@gmail.com',
+    /* де НЕ показувати (кошик, оформлення, успіх, кабінет) — щоб не заважати замовленням */
+    excludePaths: ['/cart', '/basket', '/checkout', '/order', '/onepcheckout', '/quick-order', '/success', '/profile', '/account', '/login', '/register']
+  };
+
+  const TEXTS = {
+    ua: {
+      banner: '🛠 Сайт на технічному обслуговуванні. Каталог тимчасово оновлюється — замовлення приймаємо за телефоном',
+      title: 'Сайт на технічному обслуговуванні',
+      text: 'Ми оновлюємо каталог, тому частина товарів тимчасово недоступна для замовлення на сайті. Незабаром усе запрацює у звичному режимі.',
+      contact: 'Щоб оформити замовлення або отримати консультацію, зателефонуйте нам:',
+      emptyTitle: 'Каталог оновлюється',
+      emptyText: 'Товари цього розділу тимчасово приховані на час технічного обслуговування. Замовити можна за телефоном',
+      close: 'Зрозуміло',
+      closeLabel: 'Закрити'
+    },
+    ru: {
+      banner: '🛠 Сайт на техническом обслуживании. Каталог временно обновляется — заказы принимаем по телефону',
+      title: 'Сайт на техническом обслуживании',
+      text: 'Мы обновляем каталог, поэтому часть товаров временно недоступна для заказа на сайте. Скоро всё заработает в обычном режиме.',
+      contact: 'Чтобы оформить заказ или получить консультацию, позвоните нам:',
+      emptyTitle: 'Каталог обновляется',
+      emptyText: 'Товары этого раздела временно скрыты на время технического обслуживания. Заказать можно по телефону',
+      close: 'Понятно',
+      closeLabel: 'Закрыть'
+    }
+  };
+
+  const ATTR = 'data-sk-mnt';
+  const MODAL_KEY = 'skMaintenanceModalSeen';
+  const EMPTY_MARKERS = ['немає товарів', 'нет товаров', 'товари відсутні', 'товары отсутствуют'];
+
+  /* =========================
+   * УМОВИ ПОКАЗУ
+   * ========================= */
+
+  function isExpired() {
+    if (!CONFIG.endDate) return false;
+    const d = new Date();
+    const today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    return today > CONFIG.endDate;
+  }
+
+  function isExcludedPage() {
+    const path = window.location.pathname.toLowerCase();
+    return CONFIG.excludePaths.some(function (p) { return path.indexOf(p) !== -1; });
+  }
+
+  if (isExpired() || isExcludedPage()) return;
+
+  function lang() {
+    const path = window.location.pathname.toLowerCase();
+    const htmlLang = String(document.documentElement.getAttribute('lang') || '').toLowerCase();
+    return path === '/ru' || path.indexOf('/ru/') === 0 || htmlLang.indexOf('ru') === 0 ? 'ru' : 'ua';
+  }
+
+  const T = TEXTS[lang()];
+  const phoneHref = 'tel:+38' + CONFIG.phone.replace(/\D/g, '').replace(/^38/, '');
+
+  /* =========================
+   * ЕЛЕМЕНТИ
+   * ========================= */
+
+  function addStyles() {
+    if (document.getElementById('sk-mnt-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'sk-mnt-styles';
+    style.textContent = '' +
+      '.sk-mnt-banner{position:relative;z-index:50;box-sizing:border-box;width:100%;padding:10px 16px;background:#2e211b;color:#fff;font:600 14px/1.4 inherit;text-align:center}' +
+      '.sk-mnt-banner a{color:#f3c9a8!important;text-decoration:underline!important;white-space:nowrap}' +
+      '.sk-mnt-card{box-sizing:border-box;max-width:640px;margin:24px auto;padding:24px;border:1px solid #e6d6c9;border-radius:14px;background:#f7efe8;color:#2e211b;text-align:center;font-family:inherit;line-height:1.5}' +
+      '.sk-mnt-card__icon{font-size:34px;line-height:1;margin-bottom:8px}' +
+      '.sk-mnt-card__title{font-size:20px;font-weight:700;margin-bottom:8px}' +
+      '.sk-mnt-card__text{font-size:14px;color:#5a4a40;margin-bottom:12px}' +
+      '.sk-mnt-card__phone{display:inline-block;padding:10px 22px;border-radius:999px;background:#2e211b;color:#fff!important;font-weight:700;text-decoration:none!important}' +
+      '.sk-mnt-card__mail{display:block;margin-top:8px;font-size:13px;color:#7a6556!important}' +
+      '.sk-mnt-overlay{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(30,20,15,.55)}' +
+      '.sk-mnt-overlay .sk-mnt-card{position:relative;margin:0;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25)}' +
+      '.sk-mnt-close{position:absolute;top:8px;right:10px;border:0;background:none;font-size:26px;line-height:1;color:#7a6556;cursor:pointer}' +
+      '.sk-mnt-ok{margin-top:14px;border:1px solid #2e211b;border-radius:999px;background:#fff;color:#2e211b;padding:9px 22px;font:inherit;font-weight:700;cursor:pointer}' +
+      '@media(max-width:600px){.sk-mnt-banner{font-size:13px;padding:8px 12px}.sk-mnt-card{padding:18px}.sk-mnt-card__title{font-size:18px}}';
+    document.head.appendChild(style);
+  }
+
+  function cardHtml(title, text, withContacts) {
+    return '<div class="sk-mnt-card__icon">🛠</div>' +
+      '<div class="sk-mnt-card__title">' + title + '</div>' +
+      '<div class="sk-mnt-card__text">' + text + '</div>' +
+      (withContacts ? '<div class="sk-mnt-card__text">' + T.contact + '</div>' : '') +
+      '<a class="sk-mnt-card__phone" href="' + phoneHref + '">📞 ' + CONFIG.phone + '</a>' +
+      (CONFIG.email ? '<a class="sk-mnt-card__mail" href="mailto:' + CONFIG.email + '">' + CONFIG.email + '</a>' : '');
+  }
+
+  function showBanner() {
+    if (!CONFIG.showBanner || document.querySelector('.sk-mnt-banner')) return;
+    const banner = document.createElement('div');
+    banner.className = 'sk-mnt-banner';
+    banner.setAttribute(ATTR, 'banner');
+    banner.setAttribute('role', 'status');
+    banner.innerHTML = T.banner + ' <a href="' + phoneHref + '">' + CONFIG.phone + '</a>';
+    document.body.insertBefore(banner, document.body.firstChild);
+  }
+
+  function modalSeen() {
+    try { return window.sessionStorage.getItem(MODAL_KEY) === '1'; } catch (e) { return false; }
+  }
+
+  function showModal() {
+    if (!CONFIG.showModal || modalSeen() || document.querySelector('.sk-mnt-overlay')) return;
+    const overlay = document.createElement('div');
+    overlay.className = 'sk-mnt-overlay';
+    overlay.setAttribute(ATTR, 'modal');
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.innerHTML = '<div class="sk-mnt-card">' +
+      '<button type="button" class="sk-mnt-close" aria-label="' + T.closeLabel + '">×</button>' +
+      cardHtml(T.title, T.text, true) +
+      '<div><button type="button" class="sk-mnt-ok">' + T.close + '</button></div>' +
+    '</div>';
+
+    function close() {
+      overlay.remove();
+      document.removeEventListener('keydown', onKey);
+      try { window.sessionStorage.setItem(MODAL_KEY, '1'); } catch (e) {}
+    }
+    function onKey(e) { if (e.key === 'Escape') close(); }
+
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay || e.target.closest('.sk-mnt-close, .sk-mnt-ok')) close();
+    });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(overlay);
+  }
+
+  /* «Немає товарів» у каталозі → картка з поясненням */
+  function replaceEmptyCatalog() {
+    if (!CONFIG.replaceEmptyCatalog) return;
+    const scope = document.querySelector('main') || document.body;
+    const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+    const found = [];
+    let node;
+    while ((node = walker.nextNode())) {
+      const text = node.nodeValue.replace(/\s+/g, ' ').trim().toLowerCase().replace(/[.!]$/, '');
+      if (EMPTY_MARKERS.indexOf(text) === -1) continue;
+      const el = node.parentElement;
+      if (!el || el.closest('[' + ATTR + '], header, .header, #cart, #checkout-container')) continue;
+      found.push(el);
+    }
+    found.forEach(function (el) {
+      if (el.hasAttribute('data-sk-mnt-hidden')) return;
+      el.setAttribute('data-sk-mnt-hidden', '1');
+      el.style.display = 'none';
+      const card = document.createElement('div');
+      card.className = 'sk-mnt-card';
+      card.setAttribute(ATTR, 'empty');
+      card.innerHTML = cardHtml(T.emptyTitle, T.emptyText, false);
+      el.parentNode.insertBefore(card, el.nextSibling);
+    });
+  }
+
+  /* =========================
+   * ЗАПУСК
+   * ========================= */
+
+  function start() {
+    addStyles();
+    showBanner();
+    replaceEmptyCatalog();
+    showModal();
+
+    /* каталог може довантажуватись (фільтри, AJAX) — перевіряємо повторно, без циклів */
+    let timer = 0;
+    new MutationObserver(function (mutations) {
+      const relevant = mutations.some(function (m) {
+        return !(m.target.closest && m.target.closest('[' + ATTR + ']')) &&
+          Array.prototype.some.call(m.addedNodes, function (n) { return !(n.nodeType === 1 && n.hasAttribute(ATTR)); });
+      });
+      if (!relevant) return;
+      clearTimeout(timer);
+      timer = setTimeout(function () { showBanner(); replaceEmptyCatalog(); }, 300);
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  } else {
+    start();
+  }
+})();
+</script>
