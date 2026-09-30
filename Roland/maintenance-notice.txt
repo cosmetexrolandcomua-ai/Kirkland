@@ -18,6 +18,7 @@
   if (!ENABLED) return;
   if (window.__skMaintenanceLoaded) return;
   window.__skMaintenanceLoaded = true;
+  console.info('[SKINEL] Повідомлення про техобслуговування: скрипт завантажено');
 
   /* =========================
    * НАЛАШТУВАННЯ
@@ -60,6 +61,12 @@
 
   const ATTR = 'data-sk-mnt';
   const MODAL_KEY = 'skMaintenanceModalSeen';
+  const BANNER_KEY = 'skMaintenanceBannerClosed';
+
+  /* Перевірка: відкрийте будь-яку сторінку з #mnt-test у кінці адреси — вікно і смуга покажуться знову */
+  if (window.location.hash === '#mnt-test') {
+    try { window.sessionStorage.removeItem('skMaintenanceModalSeen'); window.sessionStorage.removeItem('skMaintenanceBannerClosed'); } catch (e) {}
+  }
   const EMPTY_MARKERS = ['немає товарів', 'нет товаров', 'товари відсутні', 'товары отсутствуют'];
 
   /* =========================
@@ -98,19 +105,22 @@
     const style = document.createElement('style');
     style.id = 'sk-mnt-styles';
     style.textContent = '' +
-      '.sk-mnt-banner{position:relative;z-index:50;box-sizing:border-box;width:100%;padding:10px 16px;background:#2e211b;color:#fff;font:600 14px/1.4 inherit;text-align:center}' +
-      '.sk-mnt-banner a{color:#f3c9a8!important;text-decoration:underline!important;white-space:nowrap}' +
+      /* смуга закріплена ВНИЗУ екрана і не входить у верстку сторінки — шапку сайту не зсуває */
+      'div.sk-mnt-banner{position:fixed!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;z-index:2147482000!important;display:block!important;box-sizing:border-box;width:100%;max-width:none;margin:0!important;padding:10px 44px 10px 16px;background:#2e211b;color:#fff;font-family:inherit;font-size:14px;font-weight:600;line-height:1.4;text-align:center;box-shadow:0 -4px 16px rgba(0,0,0,.15)}' +
+      'div.sk-mnt-banner a{color:#f3c9a8!important;text-decoration:underline!important;white-space:nowrap}' +
+      'div.sk-mnt-banner .sk-mnt-banner__close{position:absolute;top:50%;right:8px;transform:translateY(-50%);width:32px;height:32px;padding:0;border:0;background:none;color:#fff;font-size:22px;line-height:32px;cursor:pointer}' +
+      'div.sk-mnt-spacer{display:block!important;height:64px;margin:0;padding:0}' +
       '.sk-mnt-card{box-sizing:border-box;max-width:640px;margin:24px auto;padding:24px;border:1px solid #e6d6c9;border-radius:14px;background:#f7efe8;color:#2e211b;text-align:center;font-family:inherit;line-height:1.5}' +
       '.sk-mnt-card__icon{font-size:34px;line-height:1;margin-bottom:8px}' +
       '.sk-mnt-card__title{font-size:20px;font-weight:700;margin-bottom:8px}' +
       '.sk-mnt-card__text{font-size:14px;color:#5a4a40;margin-bottom:12px}' +
       '.sk-mnt-card__phone{display:inline-block;padding:10px 22px;border-radius:999px;background:#7360f2;color:#fff!important;font-weight:700;text-decoration:none!important}' +
       '.sk-mnt-card__mail{display:block;margin-top:8px;font-size:13px;color:#7a6556!important}' +
-      '.sk-mnt-overlay{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(30,20,15,.55)}' +
+      '.sk-mnt-overlay{position:fixed;top:0;right:0;bottom:0;left:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(30,20,15,.55)}' +
       '.sk-mnt-overlay .sk-mnt-card{position:relative;margin:0;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25)}' +
       '.sk-mnt-close{position:absolute;top:8px;right:10px;border:0;background:none;font-size:26px;line-height:1;color:#7a6556;cursor:pointer}' +
       '.sk-mnt-ok{margin-top:14px;border:1px solid #2e211b;border-radius:999px;background:#fff;color:#2e211b;padding:9px 22px;font:inherit;font-weight:700;cursor:pointer}' +
-      '@media(max-width:600px){.sk-mnt-banner{font-size:13px;padding:8px 12px}.sk-mnt-card{padding:18px}.sk-mnt-card__title{font-size:18px}}';
+      '@media(max-width:600px){div.sk-mnt-banner{font-size:13px;padding:8px 40px 8px 12px}.sk-mnt-card{padding:18px}.sk-mnt-card__title{font-size:18px}}';
     document.head.appendChild(style);
   }
 
@@ -123,14 +133,31 @@
       (CONFIG.email ? '<a class="sk-mnt-card__mail" href="mailto:' + CONFIG.email + '">' + CONFIG.email + '</a>' : '');
   }
 
+  function bannerClosed() {
+    try { return window.sessionStorage.getItem(BANNER_KEY) === '1'; } catch (e) { return false; }
+  }
+
   function showBanner() {
-    if (!CONFIG.showBanner || document.querySelector('.sk-mnt-banner')) return;
+    if (!CONFIG.showBanner || bannerClosed() || document.querySelector('.sk-mnt-banner')) return;
+    /* відступ унизу сторінки, щоб смуга не закривала футер */
+    const spacer = document.createElement('div');
+    spacer.className = 'sk-mnt-spacer';
+    spacer.setAttribute(ATTR, 'spacer');
+
     const banner = document.createElement('div');
     banner.className = 'sk-mnt-banner';
     banner.setAttribute(ATTR, 'banner');
     banner.setAttribute('role', 'status');
-    banner.innerHTML = T.banner + ' <a href="' + viberHref + '">Viber</a>';
-    document.body.insertBefore(banner, document.body.firstChild);
+    banner.innerHTML = T.banner + ' <a href="' + viberHref + '">Viber</a>' +
+      '<button type="button" class="sk-mnt-banner__close" aria-label="' + T.closeLabel + '">×</button>';
+    banner.querySelector('.sk-mnt-banner__close').addEventListener('click', function () {
+      banner.remove();
+      spacer.remove();
+      try { window.sessionStorage.setItem(BANNER_KEY, '1'); } catch (e) {}
+    });
+
+    document.body.appendChild(spacer);
+    document.body.appendChild(banner);
   }
 
   function modalSeen() {
