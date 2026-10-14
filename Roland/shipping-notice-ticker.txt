@@ -1,34 +1,49 @@
-<!-- SKINEL-NOTICE-TICKER v1: біжучий рядок над шапкою (графік відправлень). Лише CSS — без HTML-елементів і без JavaScript: не змінює сторінку, меню, кошик і скрипти акцій. Вставити в поле «Скрипти всередині тегу <head>» ЗАМІСТЬ статичної смуги (не разом із нею). -->
+<!-- SKINEL-NOTICE-TICKER v2: біжучий рядок над шапкою (графік відправлень). Текст при завантаженні стоїть на початку смуги зліва, через 2 с починає рухатися і йде безперервною стрічкою. Лише CSS — без HTML-елементів і без JavaScript: не змінює сторінку, меню, кошик і скрипти акцій. Вставити в поле «Скрипти всередині тегу <head>» ЗАМІСТЬ статичної смуги (не разом із нею). -->
 <style>
-  html::before{
-    content:"📦 Шановні клієнти!     •     У зв'язку з обставинами, графік відправлень тимчасово змінено. Ми відновимо відправку замовлень з 19 жовтня.     •     Зверніть увагу: всі нові замовлення оброблятимуться в день їх оформлення."!important;
+  /* смуга-контейнер */
+  head{
+    display:block!important;position:relative!important;
+    box-sizing:border-box!important;height:46px!important;margin:0!important;padding:0!important;
+    overflow:hidden!important;
+    background:#2e211b!important;border:0!important;border-bottom:4px solid #e9a36b!important;
+  }
+  head > *{display:none!important}
+
+  /* текст: три однакові копії поспіль — зсув на третину дає безшовне повторення */
+  head::before{
+    content:"📦 Шановні клієнти!     •     У зв'язку з обставинами, графік відправлень тимчасово змінено. Ми відновимо відправку замовлень з 19 жовтня.     •     Зверніть увагу: всі нові замовлення оброблятимуться в день їх оформлення.     •     📦 Шановні клієнти!     •     У зв'язку з обставинами, графік відправлень тимчасово змінено. Ми відновимо відправку замовлень з 19 жовтня.     •     Зверніть увагу: всі нові замовлення оброблятимуться в день їх оформлення.     •     📦 Шановні клієнти!     •     У зв'язку з обставинами, графік відправлень тимчасово змінено. Ми відновимо відправку замовлень з 19 жовтня.     •     Зверніть увагу: всі нові замовлення оброблятимуться в день їх оформлення.     •     "!important;
     display:block!important;position:static!important;float:none!important;
-    box-sizing:border-box;width:auto;height:46px;margin:0;padding:0;
-    overflow:hidden;white-space:pre;
-    background:#2e211b;border-bottom:4px solid #e9a36b;
+    width:max-content;margin:0 0 0 16px;padding:0;
+    white-space:pre;
     color:#fff;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;line-height:42px;
-    text-indent:100%;
-    animation:sk-notice-ticker 45s linear infinite;
+    animation:sk-notice-ticker 28s linear 2s infinite;
     pointer-events:none;
   }
-  /* текст виїжджає справа і повністю ховається зліва, потім усе повторюється */
   @keyframes sk-notice-ticker{
-    from{text-indent:100%}
-    to{text-indent:-135em}
+    from{transform:translateX(0)}
+    to{transform:translateX(-33.3333%)}
   }
 
   /* російська версія сайту (/ru/) */
-  html[lang^="ru"]::before{
-    content:"📦 Уважаемые клиенты!     •     В связи с обстоятельствами график отправок временно изменён. Мы возобновим отправку заказов с 19 октября.     •     Обратите внимание: все новые заказы будут обрабатываться в день их оформления."!important;
+  html[lang^="ru"] head::before{
+    content:"📦 Уважаемые клиенты!     •     В связи с обстоятельствами график отправок временно изменён. Мы возобновим отправку заказов с 19 октября.     •     Обратите внимание: все новые заказы будут обрабатываться в день их оформления.     •     📦 Уважаемые клиенты!     •     В связи с обстоятельствами график отправок временно изменён. Мы возобновим отправку заказов с 19 октября.     •     Обратите внимание: все новые заказы будут обрабатываться в день их оформления.     •     📦 Уважаемые клиенты!     •     В связи с обстоятельствами график отправок временно изменён. Мы возобновим отправку заказов с 19 октября.     •     Обратите внимание: все новые заказы будут обрабатываться в день их оформления.     •     "!important;
   }
 
   /* телефони */
   @media (max-width:768px){
-    html::before{height:42px;font-size:14px;line-height:38px;animation-duration:30s}
+    head{height:42px!important}
+    head::before{margin-left:12px;font-size:14px;line-height:38px}
   }
 
-  /* якщо в налаштуваннях пристрою вимкнено анімацію — показуємо текст нерухомо */
+  /* якщо в налаштуваннях пристрою вимкнено анімацію — показуємо текст нерухомо, з переносом рядків */
   @media (prefers-reduced-motion:reduce){
-    html::before{animation:none;text-indent:0;white-space:normal;height:auto;line-height:1.5;padding:10px 16px;text-align:center}
+    head{height:auto!important}
+    head::before{
+      content:"📦 Шановні клієнти! У зв'язку з обставинами, графік відправлень тимчасово змінено. Ми відновимо відправку замовлень з 19 жовтня. Зверніть увагу: всі нові замовлення оброблятимуться в день їх оформлення."!important;
+      animation:none;width:auto;margin:0;padding:10px 16px;white-space:normal;line-height:1.5;text-align:center;
+    }
+    html[lang^="ru"] head::before{
+      content:"📦 Уважаемые клиенты! В связи с обстоятельствами график отправок временно изменён. Мы возобновим отправку заказов с 19 октября. Обратите внимание: все новые заказы будут обрабатываться в день их оформления."!important;
+    }
   }
 </style>
