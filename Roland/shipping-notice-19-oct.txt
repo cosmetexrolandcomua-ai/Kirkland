@@ -1,0 +1,56 @@
+<style>
+  head{
+    display:block!important;position:relative!important;
+    box-sizing:border-box!important;margin:0!important;padding:11px 20px!important;
+    overflow:hidden!important;text-align:center!important;
+    background:#2e211b!important;border:0!important;border-bottom:4px solid #e9a36b!important;
+    font-family:Arial,Helvetica,sans-serif;line-height:1.5;
+  }
+  head > *{display:none!important}
+  head::before,
+  head::after{
+    display:inline!important;position:static!important;float:none!important;
+    white-space:pre-wrap;font-size:16px;font-weight:700;pointer-events:none;
+  }
+  head::before{content:"📦 Шановні клієнти!"!important;color:#ffd9b8}
+  head::after{content:"     •     Всі замовлення будуть відправлені 19 жовтня.     •     Дякуємо за розуміння!"!important;color:#fff}
+  html[lang^="ru"] head::before{content:"📦 Уважаемые клиенты!"!important}
+  html[lang^="ru"] head::after{content:"     •     Все заказы будут отправлены 19 октября.     •     Спасибо за понимание!"!important}
+  @media (min-width:769px) and (max-width:880px){
+    head::before,head::after{font-size:14px}
+  }
+  @keyframes sk-notice-ticker{
+    from{transform:translateX(0)}
+    to{transform:translateX(-33.3333%)}
+  }
+  @media (max-width:768px){
+    head{
+      position:fixed!important;left:0!important;right:0!important;top:auto!important;bottom:0!important;z-index:2147482000!important;
+      height:calc(42px + env(safe-area-inset-bottom,0px))!important;padding:0 0 env(safe-area-inset-bottom,0px)!important;
+      text-align:left!important;
+      border-bottom:0!important;border-top:3px solid #e9a36b!important;box-shadow:0 -6px 18px rgba(0,0,0,.25)!important;
+    }
+    head::after{display:none!important}
+    head::before{
+      content:"📦 Шановні клієнти!     •     Всі замовлення будуть відправлені 19 жовтня.     •     Дякуємо за розуміння!     •     📦 Шановні клієнти!     •     Всі замовлення будуть відправлені 19 жовтня.     •     Дякуємо за розуміння!     •     📦 Шановні клієнти!     •     Всі замовлення будуть відправлені 19 жовтня.     •     Дякуємо за розуміння!     •     "!important;
+      display:block!important;width:max-content;margin:0 0 0 12px;
+      white-space:pre;color:#fff;font-size:14px;line-height:39px;
+      animation:sk-notice-ticker 14s linear 2s infinite;
+    }
+    html[lang^="ru"] head::before{
+      content:"📦 Уважаемые клиенты!     •     Все заказы будут отправлены 19 октября.     •     Спасибо за понимание!     •     📦 Уважаемые клиенты!     •     Все заказы будут отправлены 19 октября.     •     Спасибо за понимание!     •     📦 Уважаемые клиенты!     •     Все заказы будут отправлены 19 октября.     •     Спасибо за понимание!     •     "!important;
+    }
+    html{padding-bottom:calc(42px + env(safe-area-inset-bottom,0px))!important}
+  }
+  @media (max-width:768px) and (prefers-reduced-motion:reduce){
+    head{height:auto!important;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px))!important;text-align:center!important}
+    head::before{
+      content:"📦 Шановні клієнти! Всі замовлення будуть відправлені 19 жовтня. Дякуємо за розуміння!"!important;
+      animation:none;width:auto;margin:0;white-space:normal;line-height:1.5;
+    }
+    html[lang^="ru"] head::before{
+      content:"📦 Уважаемые клиенты! Все заказы будут отправлены 19 октября. Спасибо за понимание!"!important;
+    }
+    html{padding-bottom:96px!important}
+  }
+</style>
