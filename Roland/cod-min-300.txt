@@ -1,0 +1,233 @@
+<!-- SKINEL: післяплата лише для замовлень від 300 грн. Вставити в «Скрипти перед </body>» ПІСЛЯ скрипта акцій. -->
+<script>
+(function () {
+  'use strict';
+
+  var SETTINGS = {
+    minTotal: 300,                       // післяплата доступна, якщо сума до сплати >= 300 грн
+    useDiscountedTotal: true,            // true = рахувати суму з урахуванням акцій (те, що клієнт реально платить)
+    codNames: ['післяплата', 'післяплатою', 'накладений платіж', 'накладеним платежем', 'оплата при отриманні',
+               'наложенный платеж', 'наложенный платёж', 'наложенным платежом', 'оплата при получении', 'послеоплата']
+  };
+
+  var TEXTS = {
+    uk: {
+      notice: 'Для замовлень до {min} грн відправлення лише за передплатою. Післяплата доступна для замовлень від {min} грн.',
+      suffix: ' — від {min} грн'
+    },
+    ru: {
+      notice: 'Для заказов до {min} грн отправка только по предоплате. Наложенный платёж доступен для заказов от {min} грн.',
+      suffix: ' — от {min} грн'
+    }
+  };
+
+  var ATTR = 'data-sk-cod';
+  var t = TEXTS[/^ru/i.test(document.documentElement.lang || '') || /^\/ru(\/|$)/.test(location.pathname) ? 'ru' : 'uk'];
+  function fill(s) { return s.replace(/\{min\}/g, SETTINGS.minTotal); }
+
+  function norm(s) { return String(s || '').replace(/\s+/g, ' ').trim().toLowerCase(); }
+  function isCod(text) {
+    var s = norm(text);
+    if (!s) return false;
+    for (var i = 0; i < SETTINGS.codNames.length; i++) if (s.indexOf(SETTINGS.codNames[i]) !== -1) return true;
+    return false;
+  }
+  function money(s) {
+    var m = String(s || '').replace(/[\s  ]/g, '').match(/\d+(?:[.,]\d+)?/);
+    return m ? parseFloat(m[0].replace(',', '.')) : 0;
+  }
+  function visible(el) { return !!(el && (el.offsetWidth || el.offsetHeight || el.getClientRects().length)); }
+  function own(el) { return !!(el && el.closest && el.closest('[' + ATTR + ']')); }
+
+  function getTotal() {
+    var i, list;
+    if (SETTINGS.useDiscountedTotal) {
+      list = document.querySelectorAll('.sk-jp-new-total');
+      for (i = 0; i < list.length; i++) if (visible(list[i]) && money(list[i].textContent) > 0) return money(list[i].textContent);
+    }
+    list = document.querySelectorAll('.j-total-sum');
+    for (i = 0; i < list.length; i++) if (visible(list[i]) && money(list[i].textContent) > 0) return money(list[i].textContent);
+    try {
+      var c = window.AjaxCart && window.AjaxCart.getInstance && window.AjaxCart.getInstance().Cart;
+      var s = c && c.total && money(c.total.sum);
+      if (s > 0) return s;
+    } catch (e) {}
+    return 0;
+  }
+
+  function scope() {
+    var c = document.getElementById('checkout-container');
+    if (c) return c;
+    return /\/(checkout|order)/i.test(location.pathname) ? document : null;
+  }
+
+  function fire(el, type) {
+    var ev;
+    try { ev = new Event(type, { bubbles: true }); } catch (e) { ev = document.createEvent('Event'); ev.initEvent(type, true, true); }
+    el.dispatchEvent(ev);
+  }
+
+  function radioText(r) {
+    var txt = '';
+    if (r.id && window.CSS && CSS.escape) {
+      var l = document.querySelector('label[for="' + CSS.escape(r.id) + '"]');
+      if (l) txt += ' ' + l.textContent;
+    }
+    var p = r.closest('label');
+    if (p) txt += ' ' + p.textContent;
+    if (!txt) txt = (r.parentElement && r.parentElement.textContent) || '';
+    return txt + ' ' + (r.value || '');
+  }
+
+  function notice(after, show) {
+    var box = after && after.parentNode ? after.nextElementSibling : null;
+    if (box && box.getAttribute(ATTR) !== 'notice') box = null;
+    if (!show) { if (box) box.remove(); return; }
+    var text = fill(t.notice);
+    if (!box) {
+      box = document.createElement('div');
+      box.setAttribute(ATTR, 'notice');
+      box.className = 'sk-cod-notice';
+      after.insertAdjacentElement('afterend', box);
+    }
+    if (box.textContent !== text) box.textContent = text;
+    return box;
+  }
+
+  var lastNotice = null;
+
+  function apply() {
+    var root = scope();
+    if (!root) return;
+    var total = getTotal();
+    var block = total > 0 && total < SETTINGS.minTotal;
+    var seen = [];
+
+    root.querySelectorAll('select').forEach(function (sel) {
+      if (own(sel)) return;
+      var cod = [], other = [];
+      Array.prototype.forEach.call(sel.options, function (o) {
+        var base = o.hasAttribute(ATTR + '-text') ? o.getAttribute(ATTR + '-text') : o.textContent;
+        (isCod(base) ? cod : other).push(o);
+      });
+      if (!cod.length || !other.length) return;
+      cod.forEach(function (o) {
+        if (!o.hasAttribute(ATTR + '-text')) o.setAttribute(ATTR + '-text', o.textContent);
+        var base = o.getAttribute(ATTR + '-text');
+        var want = block ? base.replace(/\s+$/, '') + fill(t.suffix) : base;
+        if (o.textContent !== want) o.textContent = want;
+        if (o.disabled !== block) o.disabled = block;
+      });
+      if (block && sel.selectedIndex >= 0 && cod.indexOf(sel.options[sel.selectedIndex]) !== -1) {
+        var next = other.filter(function (o) { return !o.disabled && o.value !== ''; })[0];
+        if (next) { sel.value = next.value; fire(sel, 'input'); fire(sel, 'change'); }
+      }
+      var anchor = sel.parentElement && sel.parentElement !== root ? sel.parentElement : sel;
+      lastNotice = notice(anchor, block) || lastNotice;
+      seen.push(anchor);
+    });
+
+    var radios = Array.prototype.filter.call(root.querySelectorAll('input[type="radio"]'), function (r) { return !own(r); });
+    var groups = {};
+    radios.forEach(function (r) { (groups[r.name || '_'] = groups[r.name || '_'] || []).push(r); });
+    Object.keys(groups).forEach(function (k) {
+      var g = groups[k], cod = g.filter(function (r) { return isCod(radioText(r)); });
+      if (!cod.length || cod.length === g.length) return;
+      var other = g.filter(function (r) { return cod.indexOf(r) === -1; });
+      cod.forEach(function (r) {
+        if (r.disabled !== block) r.disabled = block;
+        var holder = r.closest('label') || r.parentElement;
+        if (holder) holder.classList.toggle('sk-cod-off', block);
+      });
+      if (block && cod.some(function (r) { return r.checked; })) {
+        var next = other.filter(function (r) { return !r.disabled; })[0];
+        if (next) next.click();
+      }
+      var last = cod[cod.length - 1], anchor = last.closest('label') || last.parentElement;
+      lastNotice = notice(anchor, block) || lastNotice;
+    });
+
+    root.querySelectorAll('li, [role="option"], [class*="option"], [class*="item"]').forEach(function (el) {
+      if (own(el) || el.tagName === 'OPTION' || el.querySelector('select, input, li, [role="option"]')) return;
+      var txt = norm(el.textContent).replace(norm(fill(t.suffix)), '').trim();
+      if (!txt || txt.length > 40 || !isCod(txt)) return;
+      el.classList.toggle('sk-cod-off', block);
+    });
+
+    if (!block) lastNotice = null;
+  }
+
+  function blocked() {
+    var root = scope();
+    if (!root) return false;
+    var total = getTotal();
+    if (!(total > 0 && total < SETTINGS.minTotal)) return false;
+    var bad = false;
+    root.querySelectorAll('select').forEach(function (sel) {
+      var o = sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+      if (o && isCod(o.getAttribute(ATTR + '-text') || o.textContent)) bad = true;
+    });
+    root.querySelectorAll('input[type="radio"]:checked').forEach(function (r) { if (isCod(radioText(r))) bad = true; });
+    return bad;
+  }
+
+  function stop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+  }
+
+  function pointOut() {
+    apply();
+    var n = document.querySelector('[' + ATTR + '="notice"]');
+    if (n) {
+      n.classList.remove('sk-cod-notice--flash');
+      void n.offsetWidth;
+      n.classList.add('sk-cod-notice--flash');
+      try { n.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (x) {}
+    }
+  }
+
+  document.addEventListener('click', function (e) {
+    var tg = e.target;
+    if (!tg || !tg.closest) return;
+    if (tg.closest('.sk-cod-off')) { stop(e); pointOut(); return; }
+    if (tg.closest('.j-submit, #checkout-container [type="submit"]') && blocked()) { stop(e); pointOut(); }
+  }, true);
+
+  document.addEventListener('submit', function (e) {
+    if (blocked()) { stop(e); pointOut(); }
+  }, true);
+
+  var css = document.createElement('style');
+  css.setAttribute(ATTR, 'css');
+  css.textContent =
+    '.sk-cod-notice{box-sizing:border-box;flex-basis:100%;width:100%;max-width:520px;margin:8px 0 4px;padding:8px 12px;' +
+    'border-left:3px solid #e9a36b;border-radius:6px;background:#fff4ea;color:#5a3a26;font-size:14px;line-height:1.45}' +
+    '.sk-cod-notice--flash{animation:sk-cod-flash .9s ease 2}' +
+    '@keyframes sk-cod-flash{50%{background:#ffd9b8}}' +
+    '.sk-cod-off{opacity:.45!important;cursor:not-allowed!important}';
+  document.head.appendChild(css);
+
+  var timer = null;
+  function schedule() { if (timer) return; timer = setTimeout(function () { timer = null; apply(); }, 120); }
+
+  function start() {
+    apply();
+    new MutationObserver(function (list) {
+      for (var i = 0; i < list.length; i++) {
+        var m = list[i];
+        if (own(m.target)) continue;
+        if (m.type === 'characterData' || m.type === 'attributes') { schedule(); return; }
+        var nodes = Array.prototype.slice.call(m.addedNodes).concat(Array.prototype.slice.call(m.removedNodes));
+        for (var j = 0; j < nodes.length; j++) if (!(nodes[j].nodeType === 1 && nodes[j].hasAttribute(ATTR))) { schedule(); return; }
+      }
+    }).observe(document.body, { childList: true, subtree: true, characterData: true });
+    document.addEventListener('change', schedule, true);
+    document.addEventListener('input', schedule, true);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
+})();
+</script>
