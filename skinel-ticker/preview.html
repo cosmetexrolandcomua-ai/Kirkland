@@ -180,7 +180,7 @@ code { font-family: var(--f-mono); font-size: .9em; background: var(--chip); pad
       <li>В адмінці Horoshop: <span class="path">Налаштування → Структура сайту → Скрипти</span>.</li>
       <li>У полі «Скрипти перед тегом &lt;/body&gt;» поставте курсор у самий кінець, <b>після</b> закриваючого <code>&lt;/script&gt;</code> вашого наявного скрипта, і вставте код з нового рядка.</li>
       <li>Натисніть «Зберегти» й оновіть сайт. Рядок з'явиться над хедером на всіх сторінках.</li>
-      <li>Щоб прибрати рядок після акції, видаліть блок або вкажіть у коді <code>endDate</code>, і він зникне сам, напр. <code>"2026-12-01T00:00:00+02:00"</code>.</li>
+      <li>Рядок вимкнеться сам <b>1 грудня о 01:00</b> за київським часом (<code>endDate: "2026-12-01T01:00:00+02:00"</code>). Щоб продовжити акцію, змініть дату в коді; щоб показувати без обмеження, залиште <code>""</code>.</li>
     </ol>
     <p class="note">Якщо хедер сайту закріплений (fixed) і перекриває рядок, впишіть у <code>insertBefore</code> селектор хедера, наприклад <code>".header"</code>, або напишіть мені, і я підлаштую під вашу тему.</p>
   </section>
@@ -343,6 +343,10 @@ function sknTicker(CONFIG, host) {
       window.addEventListener('resize', queueHeader);
     }
   }
+  if (!host && CONFIG.endDate) {
+    var left = Date.parse(CONFIG.endDate) - Date.now();
+    if (left < 864e5) setTimeout(destroy, left);
+  }
   return { el: root, destroy: destroy };
 }
 
@@ -394,7 +398,7 @@ var mounted = [];
 function cfgFor(v) {
   return { theme: v.theme, items: state.items, separator: v.separator, badge: v.badge,
     link: state.link, cta: v.cta, speed: state.speed, closable: v.closable,
-    endDate: '', insertBefore: '', fixedHeader: '#header' };
+    endDate: '2026-12-01T01:00:00+02:00', insertBefore: '', fixedHeader: '#header' };
 }
 
 function snippet(v) {
@@ -412,7 +416,7 @@ function snippet(v) {
     '    cta: ' + q(c.cta) + ',         // кнопка справа (видно, лише якщо є link)\n' +
     '    speed: ' + c.speed + ',          // швидкість, пікселів за секунду\n' +
     '    closable: ' + c.closable + ',    // хрестик «закрити»\n' +
-    '    endDate: "",          // напр. "2026-12-01T00:00:00+02:00": після цієї дати рядок зникне сам\n' +
+    '    endDate: ' + q(c.endDate) + ', // рядок вимкнеться сам 1 грудня о 01:00 за Києвом ("" = не вимикати)\n' +
     '    insertBefore: "",     // CSS-селектор, перед яким вставити ("" = на самий верх сторінки)\n' +
     '    fixedHeader: ' + q(c.fixedHeader) + ' // закріплений хедер (мобільна версія): опускається під рядок\n' +
     '  };\n\n' + engine + '\n\n' +
