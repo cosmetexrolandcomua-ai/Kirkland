@@ -17,7 +17,8 @@
     speed: 55,          // швидкість, пікселів за секунду
     closable: false,    // хрестик «закрити»
     endDate: "",          // напр. "2026-12-01T00:00:00+02:00": після цієї дати рядок зникне сам
-    insertBefore: ""      // CSS-селектор, перед яким вставити ("" = на самий верх сторінки)
+    insertBefore: "",     // CSS-селектор, перед яким вставити ("" = на самий верх сторінки)
+    fixedHeader: "#header" // закріплений хедер (мобільна версія): опускається під рядок
   };
 
   function sknTicker(CONFIG, host) {
@@ -97,12 +98,26 @@
       cta.href = href;
       inner.appendChild(cta);
     }
-    var ro = null;
+    var ro = null, hdr = null, raf = 0;
     function destroy() {
       if (ro) ro.disconnect();
       window.removeEventListener('resize', onResize);
+      window.removeEventListener('scroll', queueHeader);
+      window.removeEventListener('resize', queueHeader);
       if (root.parentNode) root.parentNode.removeChild(root);
+      if (hdr) hdr.style.removeProperty('top');
     }
+    /* A fixed header (the mobile header on Horoshop) would cover the ticker:
+       push it down while the ticker is on screen, let it stick to the top after. */
+    function syncHeader() {
+      raf = 0;
+      if (!hdr) return;
+      hdr.style.removeProperty('top');
+      if (!root.parentNode || getComputedStyle(hdr).position !== 'fixed') return;
+      var b = Math.max(0, Math.round(root.getBoundingClientRect().bottom));
+      if (b > 0) hdr.style.setProperty('top', b + 'px', 'important');
+    }
+    function queueHeader() { if (!raf) raf = requestAnimationFrame(syncHeader); }
     if (CONFIG.closable) {
       var x = el('button', 'skn-ticker__close', '<span aria-hidden="true">×</span>');
       x.type = 'button';
@@ -152,6 +167,14 @@
     if (window.ResizeObserver) { ro = new ResizeObserver(onResize); ro.observe(vp); }
     else window.addEventListener('resize', onResize);
     if (d.fonts && d.fonts.ready) d.fonts.ready.then(build);
+    if (!host && CONFIG.fixedHeader) {
+      hdr = d.querySelector(CONFIG.fixedHeader);
+      if (hdr) {
+        syncHeader();
+        window.addEventListener('scroll', queueHeader, { passive: true });
+        window.addEventListener('resize', queueHeader);
+      }
+    }
     return { el: root, destroy: destroy };
   }
 
