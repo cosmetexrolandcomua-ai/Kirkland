@@ -1,0 +1,162 @@
+<!-- Skinel · бігучий рядок «Чорні ціни» · Жовта стрічка -->
+<script>
+(function () {
+  'use strict';
+
+  var CONFIG = {
+    theme: "tape",       // noir | rose | nude | tape
+    items: [               // фрази по черзі; <b>…</b> виділяє акцентом
+      "Чорні ціни в Skinel щодня, не лише в пʼятницю",
+      "До <b>−50%</b> на обраний лікувальний догляд і косметику",
+      "Улюблені засоби за найкращою ціною"
+    ],
+    separator: "✦",    // знак між фразами
+    badge: "до −50%",       // плашка зліва ("" = без неї)
+    link: "",        // посилання на сторінку акції ("" = без посилання)
+    cta: "До знижок",         // кнопка справа (видно, лише якщо є link)
+    speed: 55,          // швидкість, пікселів за секунду
+    closable: false,    // хрестик «закрити»
+    endDate: "",          // напр. "2026-12-01T00:00:00+02:00": після цієї дати рядок зникне сам
+    insertBefore: ""      // CSS-селектор, перед яким вставити ("" = на самий верх сторінки)
+  };
+
+  function sknTicker(CONFIG, host) {
+    var d = document;
+    var KEY = 'skn-ticker-closed';
+    if (!host) {
+      if (d.getElementById('skn-ticker')) return;
+      if (CONFIG.endDate && Date.now() > Date.parse(CONFIG.endDate)) return;
+      if (CONFIG.closable) { try { if (sessionStorage.getItem(KEY)) return; } catch (e) {} }
+    }
+
+    var CSS = [
+      '.skn-ticker{--skn-bg:#0b0b0b;--skn-fg:#f6f1e9;--skn-ac:#d8b57a;--skn-bb:transparent;--skn-h:38px;position:relative;z-index:50;container:skn/inline-size;background:var(--skn-bg);color:var(--skn-fg);border-bottom:1px solid var(--skn-bb);font-size:14px;line-height:1.25;text-align:left;-webkit-font-smoothing:antialiased}',
+      '.skn-ticker *{box-sizing:border-box}',
+      '.skn-ticker__in{display:flex;align-items:stretch;min-height:var(--skn-h)}',
+      '.skn-ticker__vp{flex:1 1 auto;min-width:0;display:flex;align-items:center;overflow:hidden;color:inherit!important;text-decoration:none!important;-webkit-mask-image:linear-gradient(90deg,transparent,#000 28px,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,transparent,#000 28px,#000 calc(100% - 28px),transparent)}',
+      '.skn-ticker__track{display:flex;flex:none;width:max-content;animation:skn-marquee 40s linear infinite;will-change:transform}',
+      '.skn-ticker__set,.skn-ticker__grp{display:flex;flex:none;align-items:center}',
+      '.skn-ticker__item{white-space:nowrap;padding:0 20px}',
+      '.skn-ticker__sep{flex:none;color:var(--skn-ac);font-size:.85em}',
+      '.skn-ticker b,.skn-ticker strong{font-weight:800;color:var(--skn-ac)}',
+      '.skn-ticker:hover .skn-ticker__track,.skn-ticker:focus-within .skn-ticker__track{animation-play-state:paused}',
+      '@keyframes skn-marquee{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}',
+      '@media (prefers-reduced-motion:reduce){.skn-ticker__track{animation:none!important}}',
+      '.skn-ticker__badge{flex:none;display:flex;align-items:center;padding:0 16px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;background:var(--skn-ac);color:var(--skn-bg)}',
+      '.skn-ticker__cta{flex:none;display:flex;align-items:center;gap:6px;margin:7px 8px 7px 4px;padding:0 16px;border-radius:999px;font-size:13px;font-weight:800;white-space:nowrap;text-decoration:none!important;background:var(--skn-ac);color:var(--skn-bg)!important;transition:transform .15s}',
+      '.skn-ticker__cta:hover{transform:translateX(2px)}',
+      '.skn-ticker__close{flex:none;width:var(--skn-h);margin:0;padding:0;border:0;background:transparent;color:inherit;font-size:22px;line-height:1;cursor:pointer;opacity:.65}',
+      '.skn-ticker__close:hover{opacity:1}',
+      '.skn-ticker a:focus-visible,.skn-ticker button:focus-visible{outline:2px solid var(--skn-ac);outline-offset:-3px}',
+      /* theme: noir — black + champagne gold */
+      '.skn-ticker--noir{--skn-bb:rgba(216,181,122,.45)}',
+      '.skn-ticker--noir .skn-ticker__item{letter-spacing:.02em}',
+      /* theme: rose — graphite + neon pink pill */
+      '.skn-ticker--rose{--skn-bg:#151014;--skn-fg:#fff;--skn-ac:#ff4f9a;--skn-h:40px}',
+      '.skn-ticker--rose b,.skn-ticker--rose strong{display:inline-block;padding:2px 9px;margin:0 2px;border-radius:999px;background:var(--skn-ac);color:#151014}',
+      '.skn-ticker--rose .skn-ticker__sep{font-size:.5em}',
+      /* theme: nude — skin-tone ground, black badge */
+      '.skn-ticker--nude{--skn-bg:#f1e4d8;--skn-fg:#2b1e18;--skn-ac:#8a1c40;--skn-bb:rgba(43,30,24,.12)}',
+      '.skn-ticker--nude .skn-ticker__badge{background:#111;color:#f1e4d8}',
+      '.skn-ticker--nude .skn-ticker__sep{color:var(--skn-fg);font-size:1.6em;line-height:0}',
+      /* theme: tape — black + caution-yellow stripe */
+      '.skn-ticker--tape{--skn-bg:#0a0a0a;--skn-fg:#fff;--skn-ac:#ffd400;--skn-h:46px}',
+      '.skn-ticker--tape .skn-ticker__item{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}',
+      '.skn-ticker--tape .skn-ticker__badge{font-size:17px;letter-spacing:0;text-transform:none;color:#0a0a0a;background:repeating-linear-gradient(-45deg,#ffd400 0 12px,#f0c400 12px 24px)}',
+      '@container skn (max-width:640px){.skn-ticker__item{padding:0 14px;font-size:13px}.skn-ticker__cta{display:none}.skn-ticker__badge{padding:0 10px;font-size:11px}.skn-ticker--tape .skn-ticker__badge{font-size:14px}.skn-ticker--tape .skn-ticker__item{font-size:12px}}'
+    ].join('\n');
+    if (!d.getElementById('skn-ticker-css')) {
+      var st = d.createElement('style');
+      st.id = 'skn-ticker-css';
+      st.textContent = CSS;
+      d.head.appendChild(st);
+    }
+
+    function el(tag, cls, html) {
+      var n = d.createElement(tag);
+      if (cls) n.className = cls;
+      if (html != null) n.innerHTML = html;
+      return n;
+    }
+
+    var href = CONFIG.link || (host ? '#' : '');
+    var root = el('div', 'skn-ticker skn-ticker--' + (CONFIG.theme || 'noir'));
+    if (!host) root.id = 'skn-ticker';
+    root.setAttribute('role', 'region');
+    root.setAttribute('aria-label', 'Акція');
+    var inner = el('div', 'skn-ticker__in');
+    root.appendChild(inner);
+    if (CONFIG.badge) inner.appendChild(el('span', 'skn-ticker__badge', CONFIG.badge));
+    var vp = el(href ? 'a' : 'div', 'skn-ticker__vp');
+    if (href) vp.href = href;
+    var track = el('div', 'skn-ticker__track');
+    vp.appendChild(track);
+    inner.appendChild(vp);
+    if (CONFIG.cta && href) {
+      var cta = el('a', 'skn-ticker__cta', CONFIG.cta + ' <span aria-hidden="true">→</span>');
+      cta.href = href;
+      inner.appendChild(cta);
+    }
+    var ro = null;
+    function destroy() {
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', onResize);
+      if (root.parentNode) root.parentNode.removeChild(root);
+    }
+    if (CONFIG.closable) {
+      var x = el('button', 'skn-ticker__close', '<span aria-hidden="true">×</span>');
+      x.type = 'button';
+      x.setAttribute('aria-label', 'Закрити');
+      x.onclick = function () {
+        if (!host) { try { sessionStorage.setItem(KEY, '1'); } catch (e) {} }
+        destroy();
+      };
+      inner.appendChild(x);
+    }
+
+    var sep = '<span class="skn-ticker__sep" aria-hidden="true">' + (CONFIG.separator || '✦') + '</span>';
+    var group = (CONFIG.items || []).map(function (t) {
+      return '<span class="skn-ticker__item">' + t + '</span>' + sep;
+    }).join('');
+
+    if (host) host.appendChild(root);
+    else {
+      var target = CONFIG.insertBefore && d.querySelector(CONFIG.insertBefore);
+      if (target) target.parentNode.insertBefore(root, target);
+      else d.body.insertBefore(root, d.body.firstChild);
+    }
+
+    var lastVW = -1;
+    function build() {
+      var vw = vp.clientWidth;
+      track.innerHTML = '';
+      var set = el('div', 'skn-ticker__set', '<span class="skn-ticker__grp">' + group + '</span>');
+      track.appendChild(set);
+      var w = set.offsetWidth;
+      if (!w || !vw) return;
+      var n = Math.ceil(vw / w);
+      for (var i = 1; i < n; i++) {
+        var g = el('span', 'skn-ticker__grp', group);
+        g.setAttribute('aria-hidden', 'true');
+        set.appendChild(g);
+      }
+      var copy = set.cloneNode(true);
+      copy.setAttribute('aria-hidden', 'true');
+      track.appendChild(copy);
+      track.style.animationDuration = (w * n / (CONFIG.speed || 55)) + 's';
+      lastVW = vw;
+    }
+    function onResize() { if (vp.clientWidth !== lastVW) build(); }
+
+    build();
+    if (window.ResizeObserver) { ro = new ResizeObserver(onResize); ro.observe(vp); }
+    else window.addEventListener('resize', onResize);
+    if (d.fonts && d.fonts.ready) d.fonts.ready.then(build);
+    return { el: root, destroy: destroy };
+  }
+
+  function start() { sknTicker(CONFIG); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
+})();
+</script>

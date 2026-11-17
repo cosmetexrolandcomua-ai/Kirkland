@@ -1,0 +1,511 @@
+<title>Бігучий рядок Skinel</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Layout: one column of variant cards; each card = live desktop mock + phone mock side by side, code under it */
+:root {
+  --bg: #f4f2f0; --surface: #ffffff; --fg: #1d1a18; --muted: #6e6762;
+  --line: #e2ddd8; --chip: #ebe6e1; --accent: #1d1a18; --accent-fg: #ffffff;
+  --code-bg: #f7f5f3;
+  --f-display: "Unbounded", "Manrope", system-ui, sans-serif;
+  --f-body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141211; --surface: #1d1a19; --fg: #efebe7; --muted: #a59e98;
+    --line: #34302d; --chip: #2a2624; --accent: #efebe7; --accent-fg: #141211;
+    --code-bg: #171514; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141211; --surface: #1d1a19; --fg: #efebe7; --muted: #a59e98;
+  --line: #34302d; --chip: #2a2624; --accent: #efebe7; --accent-fg: #141211;
+  --code-bg: #171514; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 28px; }
+h1, h2 { font-family: var(--f-display); font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(26px, 4vw, 40px); line-height: 1.1; }
+h2 { font-size: 20px; line-height: 1.25; }
+p { margin: 0; }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.intro { display: grid; gap: 12px; max-width: 760px; }
+.intro p { color: var(--muted); font-size: 16px; }
+.path { font-weight: 600; color: var(--fg); }
+
+/* controls */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 16px; }
+.panel-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 20px; }
+@media (max-width: 820px) { .panel-grid { grid-template-columns: minmax(0, 1fr); } }
+.field { display: grid; gap: 6px; min-width: 0; }
+.field label, .label { font-size: 13px; font-weight: 700; }
+.hint { font-size: 13px; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: inherit; font-size: 13px; font-weight: 600; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--chip); color: var(--fg); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+textarea, input[type="text"] { font: inherit; font-size: 14px; width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
+textarea { min-height: 104px; resize: vertical; line-height: 1.5; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.num { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* variant cards */
+.variants { display: grid; gap: 24px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px; display: grid; gap: 16px; min-width: 0; }
+.card-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 20px; align-items: flex-start; }
+.card-title { display: grid; gap: 4px; max-width: 640px; }
+.tag { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+.card-title p { color: var(--muted); font-size: 14px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { font: inherit; font-size: 14px; font-weight: 700; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-fg); cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--fg); border-color: var(--line); }
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .stage { grid-template-columns: minmax(0, 1fr); justify-items: center; } .stage > .browser { width: 100%; } }
+.code { display: grid; gap: 8px; }
+.code pre { margin: 0; max-height: 360px; overflow: auto; padding: 14px; border-radius: 10px; background: var(--code-bg); border: 1px solid var(--line); font-family: var(--f-mono); font-size: 12px; line-height: 1.5; white-space: pre; }
+
+/* mock site: a fixed light look, because it stands in for the real storefront */
+.browser { border-radius: 12px; overflow: hidden; border: 1px solid #d6d1cc; background: #fff; color: #222; min-width: 0; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.browser-bar { display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: #eeebe8; border-bottom: 1px solid #ddd8d3; }
+.browser-bar i { width: 10px; height: 10px; border-radius: 50%; background: #d3cec9; display: block; }
+.browser-bar span { margin-left: 10px; font-size: 12px; color: #8a847f; background: #fff; border-radius: 6px; padding: 2px 10px; flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.site { font-family: var(--f-body); color: #222; background: #fff; }
+.site-top { display: flex; align-items: center; gap: 20px; padding: 16px 22px; border-bottom: 1px solid #efefef; }
+.logo { font-family: var(--f-display); font-weight: 700; font-size: 20px; letter-spacing: .14em; color: #111; }
+.search { flex: 1; min-width: 0; height: 38px; border-radius: 999px; background: #f4f4f4; display: flex; align-items: center; padding: 0 16px; font-size: 13px; color: #999; }
+.icons { display: flex; gap: 14px; color: #222; }
+.icons svg { width: 20px; height: 20px; display: block; }
+.site-nav { display: flex; gap: 22px; padding: 11px 22px; font-size: 13px; font-weight: 600; border-bottom: 1px solid #efefef; overflow: hidden; white-space: nowrap; }
+.site-nav .sale { color: #c0143c; }
+.site-body { padding: 18px 22px 22px; display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 14px; }
+.ph { border-radius: 10px; background: #f3efeb; min-height: 120px; }
+.ph.big { background: linear-gradient(135deg, #f1e7de, #e9ddd2); display: flex; align-items: flex-end; padding: 14px; font-weight: 800; font-size: 15px; color: #3a2a20; }
+@media (max-width: 640px) { .site-body { grid-template-columns: 1fr 1fr; } .site-body .ph.big { grid-column: 1 / -1; } .search { display: none; } }
+
+.phone { width: 300px; max-width: 100%; border-radius: 34px; border: 10px solid #1b1b1b; background: #1b1b1b; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.phone .site { border-radius: 24px; overflow: hidden; min-height: 330px; }
+.notch { height: 22px; background: #fff; display: flex; justify-content: center; align-items: center; }
+.notch::before { content: ""; width: 80px; height: 14px; border-radius: 10px; background: #1b1b1b; }
+.m-top { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid #efefef; }
+.m-top .logo { font-size: 16px; }
+.m-top svg { width: 20px; height: 20px; display: block; }
+.m-body { padding: 12px 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.m-body .ph.big { grid-column: 1 / -1; min-height: 110px; }
+.m-body .ph { min-height: 90px; }
+
+.note { font-size: 13px; color: var(--muted); }
+
+/* copy section */
+.copy-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 760px) { .copy-grid { grid-template-columns: minmax(0, 1fr); } }
+.copy-grid .box { border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 8px; align-content: start; }
+.box ul, .box ol { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.strike { text-decoration: line-through; color: var(--muted); }
+.steps { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+code { font-family: var(--f-mono); font-size: .9em; background: var(--chip); padding: 1px 6px; border-radius: 6px; }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--accent); color: var(--accent-fg); padding: 10px 18px; border-radius: 999px; font-weight: 700; font-size: 14px; }
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <span class="eyebrow">Skinel · Black Friday 2026</span>
+    <h1>Бігучий рядок «Чорні ціни»</h1>
+    <p>Чотири варіанти дизайну. Рядки нижче працюють наживо: наведіть курсор, і рядок зупиниться. Змініть текст чи швидкість, і всі прев'ю оновляться. Код під кожним варіантом вставляється в <span class="path">Налаштування → Структура сайту → Скрипти → «Скрипти перед тегом &lt;/body&gt;»</span>.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="t-text">
+    <h2 id="t-text">Текст і налаштування</h2>
+    <div class="panel-grid">
+      <div class="field">
+        <span class="label">Готові варіанти тексту</span>
+        <div class="chips" id="sets" role="group" aria-label="Варіанти тексту"></div>
+        <label for="items">Фрази рядка (кожна з нового рядка; <code>&lt;b&gt;…&lt;/b&gt;</code> виділяє слово акцентом)</label>
+        <textarea id="items" spellcheck="false"></textarea>
+      </div>
+      <div class="field" style="align-content:start; gap:14px">
+        <div class="field">
+          <label for="link">Посилання на сторінку акції</label>
+          <input type="text" id="link" placeholder="напр. /black-friday/ або https://…">
+          <span class="hint">Увесь рядок стане клікабельним. Без посилання кнопка у варіанті 4 не показується на сайті.</span>
+        </div>
+        <div class="field">
+          <div class="row"><label for="speed">Швидкість</label><span class="num" id="speedOut"></span></div>
+          <input type="range" id="speed" min="25" max="120" step="5" value="55">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="variants" id="variants" aria-label="Варіанти дизайну"></section>
+
+  <section class="panel" aria-labelledby="t-copy">
+    <h2 id="t-copy">Що змінено в тексті</h2>
+    <div class="copy-grid">
+      <div class="box">
+        <span class="label">Було</span>
+        <p class="strike">Чорні ціни на лікувальний догляд та косметику! У Skinel - щодня, не лише у пятницю До -50% на обрані товари</p>
+        <ul class="note">
+          <li>Одне довге речення в рядку читається гірше, ніж 2–3 короткі фрази по черзі.</li>
+          <li>Пропущений апостроф у «пʼятницю», дефіс замість тире, звичайний мінус замість знака «−».</li>
+          <li>Головна вигода (до −50%) стоїть у самому кінці.</li>
+        </ul>
+      </div>
+      <div class="box">
+        <span class="label">Стало (варіант A)</span>
+        <ol>
+          <li>Чорні ціни в Skinel щодня, не лише в пʼятницю</li>
+          <li>До <b>−50%</b> на обраний лікувальний догляд і косметику</li>
+          <li>Улюблені засоби за найкращою ціною</li>
+        </ol>
+        <p class="note">Знижка виділена кольором, кожна фраза коротка й читається за секунду. Слово «обраний» лишили навмисно: «до −50%» без уточнення може сприйматися як знижка на все.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="t-how">
+    <h2 id="t-how">Як встановити</h2>
+    <ol class="steps">
+      <li>Оберіть варіант і натисніть «Скопіювати код».</li>
+      <li>В адмінці Horoshop: <span class="path">Налаштування → Структура сайту → Скрипти</span>.</li>
+      <li>У полі «Скрипти перед тегом &lt;/body&gt;» поставте курсор у самий кінець, <b>після</b> закриваючого <code>&lt;/script&gt;</code> вашого наявного скрипта, і вставте код з нового рядка.</li>
+      <li>Натисніть «Зберегти» й оновіть сайт. Рядок з'явиться над хедером на всіх сторінках.</li>
+      <li>Щоб прибрати рядок після акції, видаліть блок або вкажіть у коді <code>endDate</code>, і він зникне сам, напр. <code>"2026-12-01T00:00:00+02:00"</code>.</li>
+    </ol>
+    <p class="note">Якщо хедер сайту закріплений (fixed) і перекриває рядок, впишіть у <code>insertBefore</code> селектор хедера, наприклад <code>".header"</code>, або напишіть мені, і я підлаштую під вашу тему.</p>
+  </section>
+</div>
+<div class="toast" id="toast" hidden>Код скопійовано</div>
+
+<script>
+/* ===== Engine: this exact function is what goes onto the site ===== */
+function sknTicker(CONFIG, host) {
+  var d = document;
+  var KEY = 'skn-ticker-closed';
+  if (!host) {
+    if (d.getElementById('skn-ticker')) return;
+    if (CONFIG.endDate && Date.now() > Date.parse(CONFIG.endDate)) return;
+    if (CONFIG.closable) { try { if (sessionStorage.getItem(KEY)) return; } catch (e) {} }
+  }
+
+  var CSS = [
+    '.skn-ticker{--skn-bg:#0b0b0b;--skn-fg:#f6f1e9;--skn-ac:#d8b57a;--skn-bb:transparent;--skn-h:38px;position:relative;z-index:50;container:skn/inline-size;background:var(--skn-bg);color:var(--skn-fg);border-bottom:1px solid var(--skn-bb);font-size:14px;line-height:1.25;text-align:left;-webkit-font-smoothing:antialiased}',
+    '.skn-ticker *{box-sizing:border-box}',
+    '.skn-ticker__in{display:flex;align-items:stretch;min-height:var(--skn-h)}',
+    '.skn-ticker__vp{flex:1 1 auto;min-width:0;display:flex;align-items:center;overflow:hidden;color:inherit!important;text-decoration:none!important;-webkit-mask-image:linear-gradient(90deg,transparent,#000 28px,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,transparent,#000 28px,#000 calc(100% - 28px),transparent)}',
+    '.skn-ticker__track{display:flex;flex:none;width:max-content;animation:skn-marquee 40s linear infinite;will-change:transform}',
+    '.skn-ticker__set,.skn-ticker__grp{display:flex;flex:none;align-items:center}',
+    '.skn-ticker__item{white-space:nowrap;padding:0 20px}',
+    '.skn-ticker__sep{flex:none;color:var(--skn-ac);font-size:.85em}',
+    '.skn-ticker b,.skn-ticker strong{font-weight:800;color:var(--skn-ac)}',
+    '.skn-ticker:hover .skn-ticker__track,.skn-ticker:focus-within .skn-ticker__track{animation-play-state:paused}',
+    '@keyframes skn-marquee{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}',
+    '@media (prefers-reduced-motion:reduce){.skn-ticker__track{animation:none!important}}',
+    '.skn-ticker__badge{flex:none;display:flex;align-items:center;padding:0 16px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;background:var(--skn-ac);color:var(--skn-bg)}',
+    '.skn-ticker__cta{flex:none;display:flex;align-items:center;gap:6px;margin:7px 8px 7px 4px;padding:0 16px;border-radius:999px;font-size:13px;font-weight:800;white-space:nowrap;text-decoration:none!important;background:var(--skn-ac);color:var(--skn-bg)!important;transition:transform .15s}',
+    '.skn-ticker__cta:hover{transform:translateX(2px)}',
+    '.skn-ticker__close{flex:none;width:var(--skn-h);margin:0;padding:0;border:0;background:transparent;color:inherit;font-size:22px;line-height:1;cursor:pointer;opacity:.65}',
+    '.skn-ticker__close:hover{opacity:1}',
+    '.skn-ticker a:focus-visible,.skn-ticker button:focus-visible{outline:2px solid var(--skn-ac);outline-offset:-3px}',
+    /* theme: noir — black + champagne gold */
+    '.skn-ticker--noir{--skn-bb:rgba(216,181,122,.45)}',
+    '.skn-ticker--noir .skn-ticker__item{letter-spacing:.02em}',
+    /* theme: rose — graphite + neon pink pill */
+    '.skn-ticker--rose{--skn-bg:#151014;--skn-fg:#fff;--skn-ac:#ff4f9a;--skn-h:40px}',
+    '.skn-ticker--rose b,.skn-ticker--rose strong{display:inline-block;padding:2px 9px;margin:0 2px;border-radius:999px;background:var(--skn-ac);color:#151014}',
+    '.skn-ticker--rose .skn-ticker__sep{font-size:.5em}',
+    /* theme: nude — skin-tone ground, black badge */
+    '.skn-ticker--nude{--skn-bg:#f1e4d8;--skn-fg:#2b1e18;--skn-ac:#8a1c40;--skn-bb:rgba(43,30,24,.12)}',
+    '.skn-ticker--nude .skn-ticker__badge{background:#111;color:#f1e4d8}',
+    '.skn-ticker--nude .skn-ticker__sep{color:var(--skn-fg);font-size:1.6em;line-height:0}',
+    /* theme: tape — black + caution-yellow stripe */
+    '.skn-ticker--tape{--skn-bg:#0a0a0a;--skn-fg:#fff;--skn-ac:#ffd400;--skn-h:46px}',
+    '.skn-ticker--tape .skn-ticker__item{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}',
+    '.skn-ticker--tape .skn-ticker__badge{font-size:17px;letter-spacing:0;text-transform:none;color:#0a0a0a;background:repeating-linear-gradient(-45deg,#ffd400 0 12px,#f0c400 12px 24px)}',
+    '@container skn (max-width:640px){.skn-ticker__item{padding:0 14px;font-size:13px}.skn-ticker__cta{display:none}.skn-ticker__badge{padding:0 10px;font-size:11px}.skn-ticker--tape .skn-ticker__badge{font-size:14px}.skn-ticker--tape .skn-ticker__item{font-size:12px}}'
+  ].join('\n');
+  if (!d.getElementById('skn-ticker-css')) {
+    var st = d.createElement('style');
+    st.id = 'skn-ticker-css';
+    st.textContent = CSS;
+    d.head.appendChild(st);
+  }
+
+  function el(tag, cls, html) {
+    var n = d.createElement(tag);
+    if (cls) n.className = cls;
+    if (html != null) n.innerHTML = html;
+    return n;
+  }
+
+  var href = CONFIG.link || (host ? '#' : '');
+  var root = el('div', 'skn-ticker skn-ticker--' + (CONFIG.theme || 'noir'));
+  if (!host) root.id = 'skn-ticker';
+  root.setAttribute('role', 'region');
+  root.setAttribute('aria-label', 'Акція');
+  var inner = el('div', 'skn-ticker__in');
+  root.appendChild(inner);
+  if (CONFIG.badge) inner.appendChild(el('span', 'skn-ticker__badge', CONFIG.badge));
+  var vp = el(href ? 'a' : 'div', 'skn-ticker__vp');
+  if (href) vp.href = href;
+  var track = el('div', 'skn-ticker__track');
+  vp.appendChild(track);
+  inner.appendChild(vp);
+  if (CONFIG.cta && href) {
+    var cta = el('a', 'skn-ticker__cta', CONFIG.cta + ' <span aria-hidden="true">→</span>');
+    cta.href = href;
+    inner.appendChild(cta);
+  }
+  var ro = null;
+  function destroy() {
+    if (ro) ro.disconnect();
+    window.removeEventListener('resize', onResize);
+    if (root.parentNode) root.parentNode.removeChild(root);
+  }
+  if (CONFIG.closable) {
+    var x = el('button', 'skn-ticker__close', '<span aria-hidden="true">×</span>');
+    x.type = 'button';
+    x.setAttribute('aria-label', 'Закрити');
+    x.onclick = function () {
+      if (!host) { try { sessionStorage.setItem(KEY, '1'); } catch (e) {} }
+      destroy();
+    };
+    inner.appendChild(x);
+  }
+
+  var sep = '<span class="skn-ticker__sep" aria-hidden="true">' + (CONFIG.separator || '✦') + '</span>';
+  var group = (CONFIG.items || []).map(function (t) {
+    return '<span class="skn-ticker__item">' + t + '</span>' + sep;
+  }).join('');
+
+  if (host) host.appendChild(root);
+  else {
+    var target = CONFIG.insertBefore && d.querySelector(CONFIG.insertBefore);
+    if (target) target.parentNode.insertBefore(root, target);
+    else d.body.insertBefore(root, d.body.firstChild);
+  }
+
+  var lastVW = -1;
+  function build() {
+    var vw = vp.clientWidth;
+    track.innerHTML = '';
+    var set = el('div', 'skn-ticker__set', '<span class="skn-ticker__grp">' + group + '</span>');
+    track.appendChild(set);
+    var w = set.offsetWidth;
+    if (!w || !vw) return;
+    var n = Math.ceil(vw / w);
+    for (var i = 1; i < n; i++) {
+      var g = el('span', 'skn-ticker__grp', group);
+      g.setAttribute('aria-hidden', 'true');
+      set.appendChild(g);
+    }
+    var copy = set.cloneNode(true);
+    copy.setAttribute('aria-hidden', 'true');
+    track.appendChild(copy);
+    track.style.animationDuration = (w * n / (CONFIG.speed || 55)) + 's';
+    lastVW = vw;
+  }
+  function onResize() { if (vp.clientWidth !== lastVW) build(); }
+
+  build();
+  if (window.ResizeObserver) { ro = new ResizeObserver(onResize); ro.observe(vp); }
+  else window.addEventListener('resize', onResize);
+  if (d.fonts && d.fonts.ready) d.fonts.ready.then(build);
+  return { el: root, destroy: destroy };
+}
+
+/* ===== Preview page ===== */
+var SETS = {
+  A: { label: 'A · Рекомендований', items: [
+    'Чорні ціни в Skinel щодня, не лише в пʼятницю',
+    'До <b>−50%</b> на обраний лікувальний догляд і косметику',
+    'Улюблені засоби за найкращою ціною'
+  ]},
+  B: { label: 'B · Емоційний', items: [
+    'Ваша шкіра не чекає пʼятниці, і ми теж',
+    'Чорні ціни на догляд щодня: до <b>−50%</b>',
+    'Професійна косметика для здорової шкіри вигідніше, ніж будь-коли'
+  ]},
+  C: { label: 'C · Коротко для мобільних', items: [
+    'Чорні ціни щодня',
+    'До <b>−50%</b> на обрані товари',
+    'Лікувальний догляд і косметика'
+  ]},
+  D: { label: 'D · Ваш текст, виправлений', items: [
+    'Чорні ціни на лікувальний догляд та косметику!',
+    'У Skinel щодня, не лише у пʼятницю',
+    'До <b>−50%</b> на обрані товари'
+  ]}
+};
+
+var VARIANTS = [
+  { theme: 'noir', name: 'Чорне золото', separator: '✦', badge: '', cta: '', closable: false,
+    note: 'Класика Black Friday: чорне тло, золоті акценти й тонка золота лінія знизу. Найспокійніший варіант, пасує до будь-якого дизайну.' },
+  { theme: 'rose', name: 'Рожевий неон', separator: '●', badge: '', cta: '', closable: true,
+    note: 'Знижка виділена яскравою рожевою «пігулкою», яку видно навіть боковим зором. Є хрестик: закритий рядок не з\'явиться до кінця відвідування.' },
+  { theme: 'nude', name: 'Нюд', separator: '·', badge: 'Чорні ціни', cta: '', closable: false,
+    note: 'Світле тло кольору шкіри й чорна плашка «Чорні ціни» зліва. Делікатно, у стилі доглядової косметики, не кричить.' },
+  { theme: 'tape', name: 'Жовта стрічка', separator: '✦', badge: 'до −50%', cta: 'До знижок', closable: false,
+    note: 'Найгучніший: великі літери, смугаста плашка «до −50%» і кнопка-заклик справа (на телефоні ховається). Для пікових днів розпродажу.' }
+];
+
+var ICONS = {
+  heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>',
+  user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
+  bag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 8h14l-1 13H6L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>',
+  menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg>'
+};
+
+var state = { set: 'A', items: SETS.A.items.slice(), link: '', speed: 55 };
+var mounted = [];
+
+function cfgFor(v) {
+  return { theme: v.theme, items: state.items, separator: v.separator, badge: v.badge,
+    link: state.link, cta: v.cta, speed: state.speed, closable: v.closable,
+    endDate: '', insertBefore: '' };
+}
+
+function snippet(v) {
+  var c = cfgFor(v), q = JSON.stringify;
+  var engine = sknTicker.toString().split('\n').map(function (l) { return l ? '  ' + l : l; }).join('\n');
+  return '<!-- Skinel · бігучий рядок «Чорні ціни» · ' + v.name + ' -->\n' +
+    '<script>\n(function () {\n  \'use strict\';\n\n' +
+    '  var CONFIG = {\n' +
+    '    theme: ' + q(c.theme) + ',       // noir | rose | nude | tape\n' +
+    '    items: [               // фрази по черзі; <b>…</b> виділяє акцентом\n' +
+    c.items.map(function (i) { return '      ' + q(i); }).join(',\n') + '\n    ],\n' +
+    '    separator: ' + q(c.separator) + ',    // знак між фразами\n' +
+    '    badge: ' + q(c.badge) + ',       // плашка зліва ("" = без неї)\n' +
+    '    link: ' + q(c.link) + ',        // посилання на сторінку акції ("" = без посилання)\n' +
+    '    cta: ' + q(c.cta) + ',         // кнопка справа (видно, лише якщо є link)\n' +
+    '    speed: ' + c.speed + ',          // швидкість, пікселів за секунду\n' +
+    '    closable: ' + c.closable + ',    // хрестик «закрити»\n' +
+    '    endDate: "",          // напр. "2026-12-01T00:00:00+02:00": після цієї дати рядок зникне сам\n' +
+    '    insertBefore: ""      // CSS-селектор, перед яким вставити ("" = на самий верх сторінки)\n' +
+    '  };\n\n' + engine + '\n\n' +
+    '  function start() { sknTicker(CONFIG); }\n' +
+    '  if (document.readyState === \'loading\') document.addEventListener(\'DOMContentLoaded\', start);\n' +
+    '  else start();\n})();\n<\/script>\n';
+}
+
+function desktopMock() {
+  return '<div class="browser"><div class="browser-bar"><i></i><i></i><i></i><span>skinel.com.ua</span></div>' +
+    '<div class="site"><div class="slot"></div>' +
+    '<div class="site-top"><span class="logo">SKINEL</span><div class="search">Пошук засобів, брендів, проблем шкіри…</div>' +
+    '<div class="icons">' + ICONS.heart + ICONS.user + ICONS.bag + '</div></div>' +
+    '<nav class="site-nav"><span>Каталог</span><span>Бренди</span><span>Обличчя</span><span>Тіло</span><span>Волосся</span><span>Проблеми шкіри</span><span class="sale">Чорні ціни</span></nav>' +
+    '<div class="site-body"><div class="ph big">Лікувальний догляд</div><div class="ph"></div><div class="ph"></div></div></div></div>';
+}
+function phoneMock() {
+  return '<div class="phone" aria-hidden="false"><div class="site"><div class="notch"></div><div class="slot"></div>' +
+    '<div class="m-top">' + ICONS.menu + '<span class="logo">SKINEL</span>' + ICONS.bag + '</div>' +
+    '<div class="m-body"><div class="ph big"></div><div class="ph"></div><div class="ph"></div></div></div></div>';
+}
+
+function renderCards() {
+  var root = document.getElementById('variants');
+  root.innerHTML = '';
+  VARIANTS.forEach(function (v, i) {
+    var card = document.createElement('article');
+    card.className = 'card';
+    card.innerHTML =
+      '<div class="card-head"><div class="card-title"><span class="tag">Варіант ' + (i + 1) + '</span><h2>' + v.name + '</h2><p>' + v.note + '</p></div>' +
+      '<div class="actions"><button class="btn" type="button" data-copy="' + i + '">Скопіювати код</button>' +
+      '<button class="btn ghost" type="button" data-show="' + i + '" aria-expanded="false">Показати код</button></div></div>' +
+      '<div class="stage">' + desktopMock() + phoneMock() + '</div>' +
+      '<div class="code" hidden><pre tabindex="0"></pre></div>';
+    root.appendChild(card);
+    v.card = card;
+  });
+}
+
+function mountAll() {
+  mounted.forEach(function (m) { m && m.destroy(); });
+  mounted = [];
+  VARIANTS.forEach(function (v) {
+    v.card.querySelectorAll('.slot').forEach(function (slot) {
+      mounted.push(sknTicker(cfgFor(v), slot));
+    });
+    var pre = v.card.querySelector('pre');
+    pre.textContent = snippet(v);
+  });
+}
+
+function renderChips() {
+  var box = document.getElementById('sets');
+  box.innerHTML = '';
+  Object.keys(SETS).forEach(function (k) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = SETS[k].label;
+    b.setAttribute('aria-pressed', String(state.set === k));
+    b.onclick = function () {
+      state.set = k; state.items = SETS[k].items.slice();
+      document.getElementById('items').value = state.items.join('\n');
+      renderChips(); mountAll();
+    };
+    box.appendChild(b);
+  });
+}
+
+var toastTimer;
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, 2200);
+}
+
+document.addEventListener('click', function (e) {
+  if (e.target.closest('.skn-ticker a[href="#"]')) { e.preventDefault(); return; }
+  var c = e.target.closest('[data-copy]');
+  if (c) {
+    var v = VARIANTS[+c.dataset.copy];
+    var text = snippet(v);
+    var fallback = function () {
+      var box = v.card.querySelector('.code'); box.hidden = false;
+      v.card.querySelector('[data-show]').setAttribute('aria-expanded', 'true');
+      v.card.querySelector('[data-show]').textContent = 'Сховати код';
+      var r = document.createRange(); r.selectNodeContents(box.querySelector('pre'));
+      var s = getSelection(); s.removeAllRanges(); s.addRange(r);
+      toast('Код виділено, натисніть Ctrl+C');
+    };
+    try {
+      navigator.clipboard.writeText(text).then(function () { toast('Код «' + v.name + '» скопійовано'); }, fallback);
+    } catch (err) { fallback(); }
+    return;
+  }
+  var s = e.target.closest('[data-show]');
+  if (s) {
+    var card = VARIANTS[+s.dataset.show].card, box = card.querySelector('.code');
+    box.hidden = !box.hidden;
+    s.setAttribute('aria-expanded', String(!box.hidden));
+    s.textContent = box.hidden ? 'Показати код' : 'Сховати код';
+  }
+});
+
+var debounce;
+function later(fn) { clearTimeout(debounce); debounce = setTimeout(fn, 250); }
+document.getElementById('items').addEventListener('input', function (e) {
+  state.items = e.target.value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+  state.set = null; renderChips(); later(mountAll);
+});
+document.getElementById('link').addEventListener('input', function (e) { state.link = e.target.value.trim(); later(mountAll); });
+var speed = document.getElementById('speed');
+function speedLabel() { document.getElementById('speedOut').textContent = state.speed + ' px/с'; }
+speed.addEventListener('input', function () { state.speed = +speed.value; speedLabel(); later(mountAll); });
+
+document.getElementById('items').value = state.items.join('\n');
+speedLabel();
+renderChips();
+renderCards();
+mountAll();
+</script>
